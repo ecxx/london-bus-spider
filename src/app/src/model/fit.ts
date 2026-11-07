@@ -8,7 +8,6 @@ const FIT_SMALL = 100; // px: if the area is less than this, keep only FIT_TIGHT
 const FIT_TIGHT = 8;
 const FIT_MAX_ZOOM = 16;
 export const FIT_MIN_ZOOM = 13; // the minimum zoom of the fit of a station view or a stop view
-export const ROUTE_FIT_MIN_ZOOM = 10; // the minimum zoom of the fit of a route view
 const TILE = 512;
 
 // The window, and the part of it that the panel covers (the map padding, prod_design 5.7).

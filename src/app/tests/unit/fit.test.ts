@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
-import { FIT_MIN_ZOOM, ROUTE_FIT_MIN_ZOOM, fit, type Viewport } from "../../src/model/fit";
+import { FIT_MIN_ZOOM, fit, type Viewport } from "../../src/model/fit";
 import { emptyBounds, extend, type Bounds, type LngLat } from "../../src/model/geo";
+import { MIN_ZOOM } from "../../src/params";
 
 // An independent Web Mercator, 512 px tiles: world pixels at a zoom.
 const world = ([lon, lat]: LngLat, z: number): [number, number] => {
@@ -31,7 +32,7 @@ describe("fit (app_design 5.7)", () => {
   test("wide: the lines fill the area, and their middle is at the middle of the area", () => {
     const a: LngLat = [-0.2, 51.48];
     const b: LngLat = [-0.1, 51.53];
-    const f = fit(WIDE, bounds(a, b), [], ROUTE_FIT_MIN_ZOOM)!;
+    const f = fit(WIDE, bounds(a, b), [], MIN_ZOOM)!;
     expect(f.zoom).toBeGreaterThan(10);
     expect(f.zoom).toBeLessThan(13);
     const [ax, ay] = screen(WIDE, f, a);
@@ -65,20 +66,20 @@ describe("fit (app_design 5.7)", () => {
   });
 
   test("the zoom: 692 px for 0.1 degrees of longitude at 51.5 N", () => {
-    const f = fit(WIDE, bounds([-0.2, 51.5], [-0.1, 51.5]), [], ROUTE_FIT_MIN_ZOOM)!;
+    const f = fit(WIDE, bounds([-0.2, 51.5], [-0.1, 51.5]), [], MIN_ZOOM)!;
     expect(f.zoom).toBeCloseTo(Math.log2(692 / ((0.1 / 360) * 512)), 9);
   });
 
   test("the minimum zoom: 13 for a station or a stop, 10 for a route", () => {
     const wide = bounds([-0.6, 51.3], [0.3, 51.7]); // approximately zoom 9.1
-    expect(fit(WIDE, wide, [], ROUTE_FIT_MIN_ZOOM)!.zoom).toBe(10);
+    expect(fit(WIDE, wide, [], MIN_ZOOM)!.zoom).toBe(10);
     expect(fit(WIDE, wide, [], FIT_MIN_ZOOM)!.zoom).toBe(13);
   });
 
   test("phone: the area is above the sheet, with no space for the zoom buttons", () => {
     const a: LngLat = [-0.14, 51.5];
     const b: LngLat = [-0.11, 51.52];
-    const f = fit(PHONE, bounds(a, b), [], ROUTE_FIT_MIN_ZOOM)!;
+    const f = fit(PHONE, bounds(a, b), [], MIN_ZOOM)!;
     const [ax, ay] = screen(PHONE, f, a);
     const [bx, by] = screen(PHONE, f, b);
     const fillW = Math.abs(bx - ax) / (350 - 40);
