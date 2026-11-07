@@ -81,6 +81,8 @@ a { color: inherit; }
 
 .results { flex: none; border-top: 1px solid var(--rule); max-height: 60vh; overflow-y: auto; }
 .results:empty { display: none; }
+.results .row.is-active { background: var(--hover); box-shadow: inset 3px 0 0 var(--red); }
+.results mark { background: none; color: var(--red-ink); font-weight: 700; }
 
 /* The copy of the header in the folded panel (app_design 4.2). */
 .peek { flex: none; border-top: 1px solid var(--rule); cursor: pointer; }

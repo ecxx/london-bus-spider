@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test } from "vitest";
 import type { Core } from "../../src/data/load";
-import { matchRange, search, searchIndex, stationResultText, type SearchIndex, type SearchResult } from "../../src/model/search";
+import { matchRange, search, searchIndex, stationResultText, stepSelection, type SearchIndex, type SearchResult } from "../../src/model/search";
 import { norm } from "../../src/model/text";
 import { HAS_EXPORT, getCore } from "./fixtures";
 
@@ -13,6 +13,17 @@ describe("match range (app_design 6.6)", () => {
     expect(matchRange("Oxford Circus", "circ")).toEqual([7, 11]);
     expect(matchRange("Oxford Circus", "bank")).toBe(null);
     expect(matchRange("Oxford Circus", "  ")).toBe(null);
+  });
+});
+
+describe("selection (app_design 6.6)", () => {
+  test("Down and Up move the selection, and go round at the ends", () => {
+    expect(stepSelection(0, 3, 1)).toBe(1);
+    expect(stepSelection(2, 3, 1)).toBe(0);
+    expect(stepSelection(0, 3, -1)).toBe(2);
+    expect(stepSelection(1, 3, -1)).toBe(0);
+    expect(stepSelection(0, 0, 1)).toBe(0);
+    expect(stepSelection(0, 0, -1)).toBe(0);
   });
 });
 
@@ -51,6 +62,27 @@ describe.skipIf(!HAS_EXPORT)("search of data_131026 (app_design 6.6)", () => {
     expect(a).toHaveLength(20);
     expect(names(a)).toContain("St Paul's Cathedral");
     expect(names(a)).toContain("St Pauls Academy");
+  });
+
+  test("the routes come first, then the stations", () => {
+    for (const text of ["1", "sl", "n", "oxford", "kings"]) {
+      const kinds = search(ix, text).map((r) => r.kind);
+      const firstStation = kinds.indexOf("station");
+      expect(kinds.slice(0, firstStation < 0 ? kinds.length : firstStation).every((k) => k === "line")).toBe(true);
+      expect(kinds.slice(firstStation < 0 ? kinds.length : firstStation).every((k) => k === "station")).toBe(true);
+      expect(kinds.filter((k) => k === "line").length).toBeLessThanOrEqual(8);
+      expect(kinds.filter((k) => k === "station").length).toBeLessThanOrEqual(20);
+    }
+    const r = search(ix, "sl");
+    expect(names(r).slice(0, 8)).toEqual(["#SL1", "#SL2", "#SL3", "#SL4", "#SL5", "#SL6", "#SL7", "#SL8"]);
+    expect(r.slice(8).length).toBe(20);
+  });
+
+  test("the 20 stations are the first 20 of the full order, not 20 of the list order", () => {
+    // "park" is in more than 20 station names. The names that start with it come first.
+    const st = search(ix, "park").filter((x) => x.kind === "station").map((x) => norm(x.name));
+    expect(st).toHaveLength(20);
+    expect(st.every((n) => n.startsWith("park"))).toBe(true);
   });
 
   test("no text, no results", () => {

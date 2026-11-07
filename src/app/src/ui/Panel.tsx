@@ -12,6 +12,7 @@ import { core, cover, folded, loadError, query, reduceMotion, rowHover, view, wi
 import { ViewHeader } from "./headers";
 import { BusIcon, ChevronUp, SearchIcon } from "./marks";
 import { redScroll, ScrollContext, scrollToRed } from "./scroll";
+import { comboProps, SearchResults, useSearch } from "./Search";
 import { ViewContent } from "./ViewContent";
 
 const SWIPE_PX = 24; // a vertical move on the handle of more than this is a swipe (app_design 4.2)
@@ -52,6 +53,7 @@ export function Panel() {
   const lastFolded = useRef(isFolded);
   const swipeY = useRef<number | null>(null);
   const swiped = useRef(false);
+  const s = useSearch(d);
 
   // The height of the panel and the cover of the map. fold: the call comes from a fold or an open.
   const layout = () => {
@@ -174,24 +176,23 @@ export function Panel() {
           <SearchIcon />
           <input
             id="q"
-            type="search"
+            type="text"
+            enterKeyHint="search"
             placeholder="Route, stop or station"
             autocomplete="off"
             spellcheck={false}
             aria-label="Search for a route or a station"
+            {...comboProps(s)}
             value={query.value}
             onInput={(e) => (query.value = e.currentTarget.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") {
-                query.value = "";
-                e.currentTarget.blur();
-              }
-            }}
+            onKeyDown={s.onKeyDown}
           />
           <kbd>/</kbd>
         </div>
       </div>
-      <div class="results" ref={resultsRef} onMouseOver={onRowOver} onMouseLeave={onRowLeave} />
+      <div class="results" ref={resultsRef} onMouseOver={onRowOver} onMouseLeave={onRowLeave}>
+        <SearchResults d={d} s={s} box={resultsRef} />
+      </div>
       <div
         class="peek"
         onClick={(e) => {

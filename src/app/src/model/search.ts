@@ -53,6 +53,9 @@ export function search(index: SearchIndex, text: string): SearchResult[] {
   return [...routes, ...found.slice(0, MAX_STATIONS).map(({ key, name }): SearchResult => ({ kind: "station", key, name }))];
 }
 
+// The Up (-1) and Down (+1) keys: the next selected result of n. After the last result, the first.
+export const stepSelection = (active: number, n: number, step: 1 | -1): number => (n ? (active + step + n) % n : 0);
+
 // The matched part of a name, for the --red-ink text: [start, end) in the name, or null.
 // The search form removes apostrophes, so the positions are mapped back to the name.
 export function matchRange(name: string, text: string): [number, number] | null {
