@@ -1,9 +1,10 @@
 // The indexes of export_format 6.1, and the lines (routes) from the patterns.
+import { compareStopCodes, parseIndicator } from "../model/stopCode";
 import type { LineId, LineInfo, PatternKey, Patterns, StationKey, Stops, StopKey } from "./types";
 
 export interface Indexes {
   stopPatterns: Map<StopKey, PatternKey[]>; // each pattern that contains the stop, one time, in file order
-  stationStops: Map<StationKey, StopKey[]>; // the stops of each station
+  stationStops: Map<StationKey, StopKey[]>; // the stops of each station, by stop code
   lines: Map<LineId, LineInfo>; // in file order
 }
 
@@ -29,6 +30,11 @@ export function buildIndexes(stops: Stops, patterns: Patterns): Indexes {
     const list = stationStops.get(station);
     if (list) list.push(k);
     else stationStops.set(station, [k]);
+  }
+  for (const [st, keys] of stationStops) {
+    if (keys.length < 2) continue;
+    const coded = keys.map((key) => ({ key, code: parseIndicator(stops[key]![1]).code }));
+    stationStops.set(st, coded.sort(compareStopCodes).map((s) => s.key));
   }
   return { stopPatterns, stationStops, lines };
 }
