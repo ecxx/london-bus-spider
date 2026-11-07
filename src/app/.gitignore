@@ -2,3 +2,6 @@ node_modules/
 dist/
 test-results/
 playwright-report/
+
+# The root .gitignore excludes each folder named data/. The client code in src/data/ is not data.
+!/src/data/
