@@ -5,11 +5,13 @@ import type { ExpressionSpecification, FilterSpecification, LayerSpecification, 
 import type { Highlight } from "../model/hover";
 import { lineColor, type Colors } from "./colors";
 
-export const SOURCES = ["home", "view", "stations", "hover"] as const;
+export const SOURCES = ["home", "view", "stations", "route-stops", "hover"] as const;
 export type SourceId = (typeof SOURCES)[number];
 
 const DASH_SPIDER = [1.5, 1.75]; // 6 px, 7 px at 4 px (app_design 3.6, in units of the line width)
 const DASH_SPIDER_HIGH = [1, 7 / 6]; // the same 6 px, 7 px at the 6 px of the highlight layer
+const DASH_ROUTE_OTHER = [2, 2.33]; // 6 px, 7 px at 3 px
+const DASH_ROUTE_SELECTED = [1.6, 1.6]; // 8 px, 8 px at 5 px
 const DIM = 0.12; // the opacity of the lines that are not highlighted (app_design 6.4)
 const SOLID = [1, 0];
 const STOP_ZOOM = 14; // the station dots start at this zoom (app_design 5.4)
@@ -67,6 +69,28 @@ function stationDots(c: Colors, s: LayerState): LayerSpecification {
   return layer;
 }
 
+// app_design 5.4 and 6.5: the stop dots of the route view, at all zooms. Radius 3.5 px below zoom 12,
+// 4.5 px to zoom 14, then 5.5 px; a 2 px ring below zoom 12, else 2.5 px. The first and the last stop
+// (end) are 2 px larger, with a 3 px ring and the line colour fill. circle-radius is the radius less half
+// the ring (see stationDots). A zoom expression must be the outer expression: thus step, then case.
+function routeStops(c: Colors): LayerSpecification {
+  const end: ExpressionSpecification = ["get", "end"];
+  const band = (r: number, w: number) => ["case", end, r + 2 - 3 / 2, r - w / 2] as ExpressionSpecification;
+  const ring = (w: number) => ["case", end, 3, w] as ExpressionSpecification;
+  return {
+    id: "route-stops",
+    type: "circle",
+    source: "route-stops",
+    layout: { "circle-sort-key": ["case", end, 1, 0] },
+    paint: {
+      "circle-radius": ["step", ["zoom"], band(3.5, 2), 12, band(4.5, 2.5), 14, band(5.5, 2.5)] as ExpressionSpecification,
+      "circle-stroke-width": ["step", ["zoom"], ring(2), 12, ring(2.5)] as ExpressionSpecification,
+      "circle-color": ["case", end, lineColor(c), c.stopFill],
+      "circle-stroke-color": lineColor(c),
+    },
+  };
+}
+
 export function layerSpecs(c: Colors, s: LayerState): LayerSpecification[] {
   return [
     {
@@ -75,6 +99,15 @@ export function layerSpecs(c: Colors, s: LayerState): LayerSpecification[] {
       source: "home",
       layout: ROUND,
       paint: { "line-color": lineColor(c), "line-width": 2, "line-opacity": 0.22 },
+    },
+    {
+      // app_design 6.5: the other patterns of the line in the route view.
+      id: "route-other",
+      type: "line",
+      source: "view",
+      filter: part("other"),
+      layout: ROUND,
+      paint: { "line-color": lineColor(c), "line-width": 3, "line-opacity": 0.2, "line-dasharray": dash(DASH_ROUTE_OTHER) },
     },
     {
       id: "spider-behind",
@@ -98,7 +131,17 @@ export function layerSpecs(c: Colors, s: LayerState): LayerSpecification[] {
         "line-dasharray": dash(DASH_SPIDER),
       },
     },
+    {
+      // app_design 6.5: the selected pattern of the route view.
+      id: "route-selected",
+      type: "line",
+      source: "view",
+      filter: part("selected"),
+      layout: ROUND,
+      paint: { "line-color": lineColor(c), "line-width": 5, "line-opacity": 0.95, "line-dasharray": dash(DASH_ROUTE_SELECTED) },
+    },
     stationDots(c, s),
+    routeStops(c),
     {
       // A copy of the highlighted sections after the stop: 2 px wider, opaque. Not interactive.
       id: "highlight",

@@ -5,8 +5,10 @@ import type { GeoJSONSource, LngLatLike, Map, PaddingOptions } from "maplibre-gl
 import { fit, FIT_MIN_ZOOM } from "../model/fit";
 import type { Bounds, LngLat } from "../model/geo";
 import { MAX_ZOOM, MIN_ZOOM } from "../params";
-import type { PatternKey } from "../data/types";
+import type { Core } from "../data/load";
+import type { PatternKey, StopKey } from "../data/types";
 import { core, cover, highlight, lines, reduceMotion, rowHover, scheme, view, wide, type Cover } from "../state/signals";
+import { route } from "../state/route";
 import { spider } from "../state/spider";
 import { AttributionControl } from "./attributionControl";
 import { readColors, type Colors } from "./colors";
@@ -17,6 +19,7 @@ import { applyLayers, layerSpecs, SOURCES, type LayerState, type SourceId } from
 import { maplibregl } from "./maplibre";
 import { overlayLayer } from "./overlay";
 import { Pins } from "./pins";
+import { routeMap, type RouteMap } from "./route";
 import { spiderMap, type AfterSection, type SpiderMap } from "./spider";
 import { stationsSource } from "./stations";
 import { keepClientLayers, styleUrl, transformRequest } from "./style";
@@ -127,7 +130,9 @@ export function startMap(container: HTMLElement): void {
   const source = (id: SourceId) => map.getSource<GeoJSONSource>(id)!;
   const layerState = (): LayerState => {
     const s = spider.peek();
-    return { served: s ? [...s.served] : null, station: s?.station ?? null, highlight: highlight.peek() };
+    // A route view with a context: the stops of its station are pins, not a dot (app_design 6.5).
+    const station = s?.station ?? route.peek()?.station ?? null;
+    return { served: s ? [...s.served] : null, station, highlight: highlight.peek() };
   };
 
   // The sources, empty, and the layers in the order of layers.ts. After a change of the colour scheme,
@@ -193,9 +198,10 @@ export function startMap(container: HTMLElement): void {
     const d = core.peek();
     if (!d) return;
     const s = spider.peek();
+    const station = s?.station ?? route.peek()?.station ?? null;
     const boxes: PinBox[] = (s?.pins ?? []).map((k) => ({ at: [d.stops[k]![3], d.stops[k]![2]], size: k === s?.stop ? PIN_SEL_PX : PIN_PX }));
     endLabels.place(boxes);
-    const placeNames = () => names.place(d, s ? s.served : null, s?.station ?? null);
+    const placeNames = () => names.place(d, s ? s.served : null, station);
     placeNames();
     // The station names come from the rendered station dots: after a zoom, the tiles can still load.
     if (!map.loaded()) map.once("idle", placeNames);
@@ -217,33 +223,44 @@ export function startMap(container: HTMLElement): void {
   });
   let shownFor: unknown = null;
   let fitted: unknown = null;
+  let routeShown: RouteMap | null = null;
+  const at = (d: Core, k: StopKey): LngLat => [d.stops[k]![3], d.stops[k]![2]];
   const syncView = () => {
     const d = core.peek();
     const l = lines.peek();
     const s = spider.peek();
-    const key = s && l ? s : null;
+    const r = route.peek();
+    const key = l ? (s ?? r) : null;
     if (key !== shownFor) {
       shownFor = key;
       shown = d && s && l ? spiderMap(d, l, s) : null;
+      routeShown = d && r && l ? routeMap(d, l, r) : null;
       sections = shown && new globalThis.Map(shown.after.map((a) => [a.pid, a]));
-      source("view").setData(shown?.data ?? EMPTY);
+      source("view").setData(shown?.data ?? routeShown?.data ?? EMPTY);
+      source("route-stops").setData(routeShown?.stops ?? EMPTY);
       // app_design 6.4: the end-label groups of the spider graph, then their placement at the zoom now.
-      if (d && s && shown) endLabels.set(d, shown.after, s.selected.map((k): LngLat => [d.stops[k]![3], d.stops[k]![2]]), s.ctx);
+      if (d && s && shown) endLabels.set(d, shown.after, s.selected.map((k) => at(d, k)), s.ctx);
       else endLabels.clear();
       settle();
     }
     applyLayers(map, colors, layerState());
     if (d && s && shown && fitted !== s) {
       fitted = s;
-      const focus = s.selected.map((k): LngLat => [d.stops[k]![3], d.stops[k]![2]]);
-      fitTo(shown.bounds, focus, FIT_MIN_ZOOM);
+      fitTo(shown.bounds, s.selected.map((k) => at(d, k)), FIT_MIN_ZOOM);
+    }
+    // app_design 5.7: a route view fits the selected pattern, with the stop or the stops of the station
+    // that opened it as the focus.
+    if (d && r && routeShown && fitted !== r) {
+      fitted = r;
+      fitTo(routeShown.bounds, [...r.here].map((k) => at(d, k)), MIN_ZOOM);
     }
   };
   effect(() => {
     const d = core.value;
     const s = spider.value;
+    const r = route.value;
     void lines.value;
-    if (d) pins.set(d, s?.pins ?? [], s?.stop ?? null);
+    if (d) pins.set(d, s?.pins ?? r?.pins ?? [], s?.stop ?? r?.stop ?? null);
     whenStyle(syncView);
   });
 

@@ -11,7 +11,7 @@ import { viewHash } from "../model/url";
 import { core, cover, folded, loadError, query, reduceMotion, rowHover, view, wide, type Cover } from "../state/signals";
 import { ViewHeader } from "./headers";
 import { BusIcon, ChevronUp, SearchIcon } from "./marks";
-import { ScrollContext } from "./scroll";
+import { redScroll, ScrollContext, scrollToRed } from "./scroll";
 import { ViewContent } from "./ViewContent";
 
 const SWIPE_PX = 24; // a vertical move on the handle of more than this is a swipe (app_design 4.2)
@@ -74,6 +74,13 @@ export function Panel() {
     h = Math.round(h);
     if (Math.abs(el.offsetHeight - h) < 1) setFolding(false); // no animation: no transitionend
     el.style.height = `${h}px`;
+    // app_design 6.5: a route view scrolls to its first red stop when the panel is open. During the height
+    // transition, the parts of the panel other than the scroll area have their final height.
+    const area = contentRef.current;
+    if (redScroll.pending && !folded.peek() && area) {
+      redScroll.pending = false;
+      scrollToRed(area, h - (el.offsetHeight - area.clientHeight));
+    }
     const c: Cover = wide.peek()
       ? { top: 0, right: 0, bottom: 0, left: EDGE + el.offsetWidth, fold }
       : { top: 0, right: 0, bottom: h, left: 0, fold };

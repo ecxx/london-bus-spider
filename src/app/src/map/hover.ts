@@ -1,6 +1,6 @@
 // prod_design 5.5: hover and click on the map. The routes at the pointer (at most one time each frame),
 // the tooltips, the highlight and the route menu (app_design 6.4). The tooltips and the clicks of the
-// station dots (app_design 5.5) and of the stop pins.
+// station dots (app_design 5.5), of the stop dots of the route view (app_design 6.5) and of the stop pins.
 import type { Map, MapGeoJSONFeature, MapMouseEvent, PointLike } from "maplibre-gl";
 import type { Core } from "../data/load";
 import type { PatternKey, StopKey } from "../data/types";
@@ -79,9 +79,17 @@ export class MapHover {
     return hoverItems(d, near);
   }
 
-  private dotAt(p: { x: number; y: number }): MapGeoJSONFeature | undefined {
-    if (!this.map.getLayer("station-dots")) return undefined;
-    return this.map.queryRenderedFeatures([p.x, p.y], { layers: ["station-dots"] })[0];
+  // The dot at a point: a stop dot of the route view, else a station dot (the stop dots are above).
+  private dotAt(p: { x: number; y: number }): { kind: "stop" | "station"; k: string; f: MapGeoJSONFeature } | undefined {
+    for (const [layer, kind] of [
+      ["route-stops", "stop"],
+      ["station-dots", "station"],
+    ] as const) {
+      if (!this.map.getLayer(layer)) continue;
+      const f = this.map.queryRenderedFeatures([p.x, p.y], { layers: [layer] })[0];
+      if (f) return { kind, k: f.properties.k as string, f };
+    }
+    return undefined;
   }
 
   private href(i: HoverItem): string {
@@ -101,18 +109,16 @@ export class MapHover {
     const x = box.left + this.pt.x;
     const y = box.top + this.pt.y;
 
-    // A station dot is above the lines (prod_design 5.4).
+    // The dots are above the lines (prod_design 5.4).
     const dot = this.dotAt(this.pt);
     if (dot) {
-      const k = dot.properties.k as string;
-      if (this.key !== `dot|${k}`) {
+      const { kind, k } = dot;
+      if (this.key !== `${kind}|${k}`) {
         this.clearRoutes();
-        this.key = `dot|${k}`;
-        const ks = d.stationStops.get(k) ?? [];
-        const sub = stopsText(ks.map((s) => ({ indicator: d.stops[s]![1], heading: d.stops[s]![5], name: stopName(d, s) })));
-        const [lon, lat] = (dot.geometry as GeoJSON.Point).coordinates as [number, number];
+        this.key = `${kind}|${k}`;
+        const [lon, lat] = (dot.f.geometry as GeoJSON.Point).coordinates as [number, number];
         const at = this.map.project([lon, lat]);
-        this.tip.show(nameTip(stationName(d, k), sub, true), box.left + at.x, box.top + at.y, DOT_DY);
+        this.tip.show(kind === "stop" ? stopTip(d, k) : stationTip(d, k), box.left + at.x, box.top + at.y, DOT_DY);
       }
       this.map.getCanvas().style.cursor = "pointer";
       return;
@@ -150,7 +156,7 @@ export class MapHover {
     const dot = this.dotAt(e.point);
     if (dot) {
       this.menu.close();
-      return go(viewHash({ kind: "station", key: dot.properties.k as string }));
+      return go(viewHash({ kind: dot.kind, key: dot.k }));
     }
     const items = this.routesAt(e.point);
     if (items.length === 1) {
@@ -172,7 +178,7 @@ export class MapHover {
     this.end();
     this.onPin = true;
     const r = el.firstElementChild!.getBoundingClientRect();
-    this.tip.show(nameTip(stopName(d, k), stopCode(d, k).text, false), r.left + r.width / 2, r.top + r.height / 2, r.height / 2 + PIN_DY);
+    this.tip.show(stopTip(d, k), r.left + r.width / 2, r.top + r.height / 2, r.height / 2 + PIN_DY);
   }
 
   pinLeave(): void {
@@ -180,3 +186,13 @@ export class MapHover {
     this.tip.hide();
   }
 }
+
+// The tooltip of a station dot: the name and its stops (app_design 3.5, 5.5).
+function stationTip(d: Core, k: string): (Node | string)[] {
+  const ks = d.stationStops.get(k) ?? [];
+  const sub = stopsText(ks.map((s) => ({ indicator: d.stops[s]![1], heading: d.stops[s]![5], name: stopName(d, s) })));
+  return nameTip(stationName(d, k), sub, true);
+}
+
+// The tooltip of a stop pin or a stop dot: the stop name and its text form (app_design 3.5).
+const stopTip = (d: Core, k: StopKey): (Node | string)[] => nameTip(stopName(d, k), stopCode(d, k).text, false);

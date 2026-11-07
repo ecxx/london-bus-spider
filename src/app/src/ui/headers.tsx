@@ -1,8 +1,9 @@
 // The header of each view (app_design 6.2, 6.3, 6.5, 6.7). The folded panel shows a copy (app_design 4.2).
 import type { Core } from "../data/load";
-import { routeHeader, routeView } from "../model/route";
+import { routeHeader } from "../model/route";
 import { stationName, stationOf, stopCode, stopName, stopRoundel } from "../model/text";
 import { viewHash, type View } from "../model/url";
+import { route } from "../state/route";
 import { goUp } from "../state/router";
 import { Badge, CloseIcon, Roundel, StationRing } from "./marks";
 
@@ -47,7 +48,7 @@ export function ViewHeader({ d, view }: { d: Core; view: View }) {
       );
     }
     case "route": {
-      const r = routeView(d, view.line, view.dir, view.n, view.ctx);
+      const r = route.value;
       if (!r) return null;
       const h = routeHeader(d, r.pid);
       return (
