@@ -55,14 +55,28 @@ test.describe("first view (app_design 5.2)", () => {
     expect(Math.abs(p.y - panel.y / 2)).toBeLessThan(1);
   });
 
-  test("the zoom range is 10 to 19, with no rotation and no pitch", async ({ page }) => {
+  test("the zoom range is 8 to 19, with no rotation and no pitch", async ({ page }) => {
     await open(page, "#/");
     await mapReady(page);
     const r = await page.evaluate(() => {
       const m = window.__map!;
       return { min: m.getMinZoom(), max: m.getMaxZoom(), pitch: m.getMaxPitch(), rotate: m.dragRotate.isEnabled() };
     });
-    expect(r).toEqual({ min: 10, max: 19, pitch: 0, rotate: false });
+    expect(r).toEqual({ min: 8, max: 19, pitch: 0, rotate: false });
+  });
+
+  test("the centre stays in CENTRE_BOX, and zoom 8 stays zoom 8", async ({ page }) => {
+    await open(page, "#/");
+    await mapReady(page);
+    const r = await page.evaluate(() => {
+      const m = window.__map!;
+      m.jumpTo({ center: [2.35, 48.86], zoom: 8 }); // Paris
+      const c = m.getCenter();
+      return { lng: c.lng, lat: c.lat, zoom: m.getZoom() };
+    });
+    expect(r.lng).toBeCloseTo(0.33, 6);
+    expect(r.lat).toBeCloseTo(51.22, 6);
+    expect(r.zoom).toBe(8);
   });
 });
 
