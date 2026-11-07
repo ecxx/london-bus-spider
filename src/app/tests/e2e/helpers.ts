@@ -12,15 +12,34 @@ export async function open(page: Page, hash: string): Promise<void> {
 export const h1 = (page: Page) => page.locator(".scroll .head h1");
 export const hash = (page: Page) => page.evaluate(() => location.hash);
 
-// Wait for the map, its style and (optional) the home lines.
+// The predicates of waitForFunction read the source data with serialize(), not with getData():
+// waitForFunction does not wait for a Promise (an async predicate is true at once).
+type Fc = { features: unknown[] };
+
+// Wait for the map, its style and (optional) the home lines. The client adds its layers with empty
+// sources at "style.load", and sets the data when it is loaded: wait for the data of the home source.
 export async function mapReady(page: Page, homeLines = false): Promise<void> {
   await page.waitForFunction(
     (home) => {
       const m = window.__map;
-      return !!m && m.isStyleLoaded() !== undefined && (!home || !!m.getLayer("home-lines"));
+      if (!m || m.isStyleLoaded() === undefined) return false;
+      return !home || (!!m.getLayer("home-lines") && (m.getSource("home")!.serialize().data as Fc).features.length > 0);
     },
     homeLines,
-    { timeout: 30_000 },
+    { timeout: 30_000, polling: 100 },
+  );
+}
+
+// Wait for the fit of a view (prod_design 5.7): the view source has data, and no fit waits or moves the map.
+export async function fitDone(page: Page): Promise<void> {
+  await page.waitForFunction(
+    () => {
+      const m = window.__map;
+      const src = m?.getSource("view");
+      return !!src && (src.serialize().data as Fc).features.length > 0 && !window.__fitBusy!() && !m!.isMoving();
+    },
+    null,
+    { timeout: 30_000, polling: 100 },
   );
 }
 

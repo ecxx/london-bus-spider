@@ -1,6 +1,7 @@
 // prod_design 5.2: the basemap, the CARTO key, and the change of the colour scheme.
 import type { RequestParameters, StyleSpecification } from "maplibre-gl";
 import type { Scheme } from "../state/signals";
+import { LAYERS, SOURCES } from "./layers";
 
 const STYLE_LIGHT = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"; // Positron
 const STYLE_DARK = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"; // Dark Matter
@@ -24,15 +25,12 @@ export function transformRequest(url: string): RequestParameters | undefined {
   return { url: u.toString() };
 }
 
-// The sources and the layers of the client, from the bottom (prod_design 5.3, 5.4). A change of the
-// colour scheme copies them into the new style.
-export const CLIENT_SOURCES = ["home"];
-export const CLIENT_LAYERS = ["home-lines"];
-
+// A change of the colour scheme copies the sources and the layers of the client (map/layers.ts) into
+// the new style, above the layers of the basemap.
 export function keepClientLayers(prev: StyleSpecification | undefined, next: StyleSpecification): StyleSpecification {
   if (!prev) return next;
   const sources = { ...next.sources };
-  for (const id of CLIENT_SOURCES) if (prev.sources[id]) sources[id] = prev.sources[id];
-  const layers = [...next.layers, ...prev.layers.filter((l) => CLIENT_LAYERS.includes(l.id))];
+  for (const id of SOURCES) if (prev.sources[id]) sources[id] = prev.sources[id];
+  const layers = [...next.layers, ...prev.layers.filter((l) => LAYERS.includes(l.id))];
   return { ...next, sources, layers };
 }

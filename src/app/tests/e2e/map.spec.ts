@@ -96,8 +96,10 @@ test.describe("basemap and colour scheme (prod_design 5.2)", () => {
       "match", ["get", "lcls"], "night", "#8EA2F0", "#F0453F",
     ]);
     expect(await homeFeatures(page)).toBe(1_343);
-    // The client layers are above the basemap.
-    expect(await page.evaluate(() => window.__map!.getStyle().layers.at(-1)!.id)).toBe("home-lines");
+    // The client layers are above the basemap, in the order of prod_design 5.4.
+    const ids = await page.evaluate(() => window.__map!.getStyle().layers.map((l) => l.id));
+    const at = ids.indexOf("home-lines");
+    expect(ids.slice(at)).toEqual(["home-lines", "spider-behind", "spider-after", "station-dots"]);
   });
 
   test("?theme=dark overrides the system setting", async ({ page }) => {

@@ -200,6 +200,41 @@ a { color: inherit; }
 .scroll:has(.vstick) { scroll-padding-top: 30px; }
 .vstick:empty { visibility: hidden; }
 
+/* ---------- Toolbar and chips (app_design 6.2, 6.3) ---------- */
+.toolbar { padding: 0 16px 12px; display: flex; flex-direction: column; gap: 10px; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 32px; padding: 0 12px;
+  border: 1.5px solid var(--rule); border-radius: 999px;
+  background: var(--panel); cursor: pointer;
+  font-weight: 600; font-size: 13.5px; color: var(--ink-2); text-decoration: none;
+}
+.chip:hover { background: var(--hover); }
+.chip:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+.chip[aria-pressed="true"], .chip[aria-current="true"] { border-color: var(--ink); background: var(--ink); color: var(--panel); }
+.chip .n { font-weight: 500; opacity: .7; }
+.chip.stop { padding: 0 10px 0 3px; }
+.chip.stop .roundel { width: 24px; height: 24px; font-size: 10.5px; } /* app_design 3.4: stop chip */
+
+/* ---------- Map marks (prod_design 5.6). z-index from the bottom: end labels, pins, the selected pin. ---------- */
+.pin { z-index: 3; cursor: pointer; }
+.pin .roundel {
+  width: 20px; height: 20px; font-size: 9px;
+  box-shadow: 0 0 0 2px var(--stop-fill), 0 1px 3px rgba(0, 0, 0, .3);
+}
+.pin.sel { z-index: 4; }
+.pin.sel .roundel {
+  position: relative; width: 36px; height: 36px; font-size: 13px;
+  box-shadow: 0 0 0 3px var(--stop-fill), 0 0 0 6px color-mix(in srgb, var(--red) 35%, transparent), 0 2px 8px rgba(0, 0, 0, .35);
+}
+.pin.sel .roundel::after {
+  content: ""; position: absolute; inset: -3px; border-radius: 50%;
+  border: 3px solid var(--red); animation: pulse 2s ease-out infinite;
+}
+@keyframes pulse { from { opacity: .7; scale: 1; } to { opacity: 0; scale: 2.2; } }
+@media (prefers-reduced-motion: reduce) { .pin.sel .roundel::after { animation: none; display: none; } }
+
 /* ---------- About (app_design 6.7) ---------- */
 .about { padding: 0 16px 20px; color: var(--ink-2); }
 .about p { margin: 0 0 12px; }

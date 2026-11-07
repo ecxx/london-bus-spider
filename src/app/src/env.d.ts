@@ -5,4 +5,5 @@ declare const __CARTO_KEY__: string;
 
 interface Window {
   __map?: import("maplibre-gl").Map; // the map, for the browser tests (development server only)
+  __fitBusy?: () => boolean; // a fit waits for its frame or moves the map (development server only)
 }
