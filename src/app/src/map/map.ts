@@ -2,7 +2,7 @@
 import { effect } from "@preact/signals";
 import type { FeatureCollection } from "geojson";
 import type { GeoJSONSource, LngLatLike, Map, PaddingOptions } from "maplibre-gl";
-import { fit, FIT_MIN_ZOOM } from "../model/fit";
+import { fit, FIT_MIN_ZOOM, ROUTE_FIT_MIN_ZOOM } from "../model/fit";
 import type { Bounds, LngLat } from "../model/geo";
 import { MAX_ZOOM, MIN_ZOOM } from "../params";
 import type { Core } from "../data/load";
@@ -25,6 +25,10 @@ import { stationsSource } from "./stations";
 import { keepClientLayers, styleUrl, transformRequest } from "./style";
 
 const START: { center: LngLatLike; zoom: number } = { center: [-0.1248, 51.5081], zoom: 12 }; // Charing Cross (app_design 5.2)
+// The centre of the free area stays in this box: the stops of the network, with a small margin
+// (app_design 5.2). Thus the map does not show areas far from the network, and it does not load
+// their basemap tiles.
+const CENTRE_BOX = { west: -0.6, south: 51.22, east: 0.33, north: 51.7 };
 const FOLD_MS = 250; // the map move of a fold on a phone (app_design 4.2)
 const SETTLE_MS = 150; // after a zoom, the end labels and the station names wait this time with no move (prod_design 5.8)
 const PIN_PX = 20; // the diameter of a stop pin, and of the selected pin (app_design 3.4)
@@ -39,6 +43,16 @@ function hasWebGL2(): boolean {
   } catch {
     return false;
   }
+}
+
+// app_design 5.2: the zoom range, and the centre in CENTRE_BOX. The centre is the middle of the free
+// area (the map padding). This function replaces the MapLibre constrain, thus it also clamps the zoom.
+function constrain(c: maplibregl.LngLat, zoom: number): { center: maplibregl.LngLat; zoom: number } {
+  const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+  return {
+    center: new maplibregl.LngLat(clamp(c.lng, CENTRE_BOX.west, CENTRE_BOX.east), clamp(c.lat, CENTRE_BOX.south, CENTRE_BOX.north)),
+    zoom: clamp(zoom, MIN_ZOOM, MAX_ZOOM),
+  };
 }
 
 // prod_design 5.1: with no WebGL, no map. The panel operates with no map.
@@ -74,6 +88,7 @@ export function startMap(container: HTMLElement): void {
       maxPitch: 0,
       attributionControl: false,
       renderWorldCopies: false,
+      transformConstrain: constrain,
     });
   } catch (err) {
     console.error(err);
@@ -252,7 +267,7 @@ export function startMap(container: HTMLElement): void {
     // that opened it as the focus.
     if (d && r && routeShown && fitted !== r) {
       fitted = r;
-      fitTo(routeShown.bounds, [...r.here].map((k) => at(d, k)), MIN_ZOOM);
+      fitTo(routeShown.bounds, [...r.here].map((k) => at(d, k)), ROUTE_FIT_MIN_ZOOM);
     }
   };
   effect(() => {
