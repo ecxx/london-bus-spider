@@ -69,6 +69,16 @@ export function stopRoundel(d: Core, k: StopKey): { text: string; stand: boolean
   return { text: roundelText(c), stand: c.kind === "stand" };
 }
 
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+// app_design 6.7: the date of the bus data, from the dataset name. "data_131026" gives "13 October 2026".
+export function datasetDate(dataset: string): string | null {
+  const m = /^data_(\d\d)(\d\d)(\d\d)$/.exec(dataset);
+  const month = m ? MONTHS[Number(m[2]) - 1] : undefined;
+  if (!m || !month || Number(m[1]) < 1 || Number(m[1]) > 31) return null;
+  return `${Number(m[1])} ${month} 20${m[3]}`;
+}
+
 // The main pattern of a line for the home list and the search: outbound first (app_design 6.5).
 export const mainPattern = (line: LineInfo): PatternKey => (line.dirs.outbound[0] ?? line.dirs.inbound[0])!;
 

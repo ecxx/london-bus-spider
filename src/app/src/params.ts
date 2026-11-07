@@ -4,3 +4,5 @@
 export const PHONE_MAX_PX = 640; // a window of this width or less has the phone layout (app_design 4.1)
 export const MIN_ZOOM = 10; // the zoom range of the map (app_design 5.2)
 export const MAX_ZOOM = 19;
+export const ROW_H = 48; // px: a row of the station list (app_design 7)
+export const HEAD_H = 30; // px: a letter header of the station list
