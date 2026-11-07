@@ -8,8 +8,16 @@ export default defineConfig({
   reporter: "list",
   use: { baseURL: `http://localhost:${PORT}` },
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    { name: "webkit", use: { ...devices["Desktop Safari"] } },
+    { name: "chromium", use: { ...devices["Desktop Chrome"] }, grepInvert: /@perf/ },
+    { name: "webkit", use: { ...devices["Desktop Safari"] }, grepInvert: /@perf/ },
+    // The measurements (tag @perf) need the GPU. Headless Chromium uses a software renderer (SwiftShader)
+    // unless ANGLE uses Metal. Run one test at a time, so that the measurements do not share the GPU.
+    {
+      name: "chromium-gpu",
+      grep: /@perf/,
+      fullyParallel: false,
+      use: { ...devices["Desktop Chrome"], launchOptions: { args: ["--use-angle=metal", "--enable-gpu", "--ignore-gpu-blocklist"] } },
+    },
   ],
   webServer: {
     command: `npx vite --port ${PORT} --strictPort`,

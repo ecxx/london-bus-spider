@@ -3,11 +3,13 @@ import "@fontsource/hanken-grotesk/500.css";
 import "@fontsource/hanken-grotesk/600.css";
 import "@fontsource/hanken-grotesk/700.css";
 import "@fontsource/hanken-grotesk/800.css";
+import "maplibre-gl/dist/maplibre-gl.css";
 import "./styles/tokens.css";
 import "./styles/app.css";
 import { effect } from "@preact/signals";
 import { render } from "preact";
 import { FormatError, loadCore, loadLines } from "./data/load";
+import { startMap } from "./map/map";
 import { startRouter } from "./state/router";
 import { core, forcedScheme, lines, loadError, scheme } from "./state/signals";
 import { App } from "./ui/App";
@@ -20,6 +22,7 @@ effect(() => {
 
 render(<App />, document.getElementById("app")!);
 startRouter();
+startMap(document.getElementById("map")!);
 
 // prod_design 4.1: the panel operates after stops, stations and patterns. The lines come after.
 (async () => {
