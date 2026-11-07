@@ -2,12 +2,15 @@
 // layerSpecs gives each layer with its paint and filter for the current state. applyLayers sets them
 // again: after a change of the colour scheme or of the view. (MapLibre ignores a value that did not change.)
 import type { ExpressionSpecification, FilterSpecification, LayerSpecification, Map } from "maplibre-gl";
+import type { Highlight } from "../model/hover";
 import { lineColor, type Colors } from "./colors";
 
-export const SOURCES = ["home", "view", "stations"] as const;
+export const SOURCES = ["home", "view", "stations", "hover"] as const;
 export type SourceId = (typeof SOURCES)[number];
 
 const DASH_SPIDER = [1.5, 1.75]; // 6 px, 7 px at 4 px (app_design 3.6, in units of the line width)
+const DASH_SPIDER_HIGH = [1, 7 / 6]; // the same 6 px, 7 px at the 6 px of the highlight layer
+const DIM = 0.12; // the opacity of the lines that are not highlighted (app_design 6.4)
 const SOLID = [1, 0];
 const STOP_ZOOM = 14; // the station dots start at this zoom (app_design 5.4)
 const DIM_ZOOM = 15; // the station dots that a spider graph does not serve start at this zoom
@@ -16,11 +19,19 @@ const DIM_ZOOM = 15; // the station dots that a spider graph does not serve star
 export interface LayerState {
   served: string[] | null; // a spider graph: the station keys of the red rings. null: no spider graph.
   station: string | null; // the selected station: its stops show as pins, not as a dot (app_design 5.5)
+  highlight: Highlight | null; // the highlighted routes (app_design 6.4)
 }
 
 const dash = (d: number[]): ExpressionSpecification => ["match", ["get", "cls"], "limited", ["literal", d], ["literal", SOLID]];
-const part = (p: string): FilterSpecification => ["==", ["get", "part"], p];
+const part = (p: string): ExpressionSpecification => ["==", ["get", "part"], p];
 const ROUND = { "line-join": "round", "line-cap": "round" } as const;
+const NONE: FilterSpecification = part("");
+
+// The features of the highlighted routes: the lines, and the direction if the highlight has one.
+function highlighted(h: Highlight): ExpressionSpecification {
+  const lines: ExpressionSpecification = ["in", ["get", "line"], ["literal", h.lines]];
+  return h.dir ? ["all", lines, ["==", ["get", "dir"], h.dir]] : lines;
+}
 
 // app_design 5.4 and 5.5. The demo (Leaflet) draws the stroke on the radius; MapLibre draws it outside
 // the radius. Thus circle-radius is the radius of the table less half the stroke, and the dots have the
@@ -80,13 +91,34 @@ export function layerSpecs(c: Colors, s: LayerState): LayerSpecification[] {
       source: "view",
       filter: part("after"),
       layout: { ...ROUND, "line-sort-key": ["-", ["get", "len"]] },
-      paint: { "line-color": lineColor(c), "line-width": 4, "line-opacity": 0.8, "line-dasharray": dash(DASH_SPIDER) },
+      paint: {
+        "line-color": lineColor(c),
+        "line-width": 4,
+        "line-opacity": s.highlight ? ["case", highlighted(s.highlight), 0.8, DIM] : 0.8,
+        "line-dasharray": dash(DASH_SPIDER),
+      },
     },
     stationDots(c, s),
+    {
+      // A copy of the highlighted sections after the stop: 2 px wider, opaque. Not interactive.
+      id: "highlight",
+      type: "line",
+      source: "view",
+      filter: s.highlight ? ["all", part("after"), highlighted(s.highlight)] : NONE,
+      layout: { ...ROUND, "line-sort-key": ["-", ["get", "len"]] },
+      paint: { "line-color": lineColor(c), "line-width": 6, "line-opacity": 1, "line-dasharray": dash(DASH_SPIDER_HIGH) },
+    },
+    {
+      // app_design 5.6: radius 9 px and a 2.5 px --ink line, to the middle of the line (see stationDots).
+      id: "hover-ring",
+      type: "circle",
+      source: "hover",
+      paint: { "circle-radius": 9 - 1.25, "circle-opacity": 0, "circle-stroke-width": 2.5, "circle-stroke-color": c.ink },
+    },
   ];
 }
 
-export const LAYERS = layerSpecs({ red: "", night: "", behind: "", stopFill: "", stopRing: "", ink: "" }, { served: null, station: null }).map((l) => l.id);
+export const LAYERS = layerSpecs({ red: "", night: "", behind: "", stopFill: "", stopRing: "", ink: "" }, { served: null, station: null, highlight: null }).map((l) => l.id);
 
 // Set the paint properties and the filters of each layer again.
 export function applyLayers(map: Map, c: Colors, s: LayerState): void {

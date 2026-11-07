@@ -1,7 +1,7 @@
 // app_design 4.3: the hash router.
 import { effect } from "@preact/signals";
 import { parseHash, resolveView, upView, viewHash, type View } from "../model/url";
-import { core, view } from "./signals";
+import { core, highlight, rowHover, view } from "./signals";
 
 // Open a view. replace: replace the history entry (D12), else add one.
 export function go(hash: string, replace = false): void {
@@ -38,6 +38,9 @@ function route(): void {
   if (v !== parsed || (parsed.kind === "home" && location.hash !== "" && location.hash !== "#/")) {
     history.replaceState(null, "", viewHash(v));
   }
+  // A new view: the row under the pointer and the highlighted routes are of the old view.
+  highlight.value = null;
+  rowHover.value = null;
   view.value = v;
 }
 

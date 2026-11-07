@@ -30,6 +30,9 @@ test.describe("home view (app_design 6.1)", () => {
     await page.setViewportSize(WIDE);
     await open(page, "#/");
     await page.getByRole("tab", { name: "Stations 11,571" }).click();
+    // The pointer off the list: a row that scrolls under the pointer moves the hover ring, and each
+    // move draws the map again (slow with the software renderer of the browser tests).
+    await page.mouse.move(WIDE.width - 20, 20);
     const r = await scroll(page).evaluate(async (el) => {
       const frame = () => new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)));
       const seen = new Set<string>();

@@ -6,6 +6,7 @@ import { pointCount, positions } from "../data/polyline";
 import type { DecodedLine, Direction, LineId, PatternKey } from "../data/types";
 import { sections } from "../model/cut";
 import { emptyBounds, extendCoords, lengthM, type Bounds, type LngLat } from "../model/geo";
+import { mercBounds, mercator } from "../model/hover";
 import type { Spider } from "../state/spider";
 
 // The section after the stop of a pattern: for the hit test (prod_design 5.5) and the end labels (5.6).
@@ -17,6 +18,8 @@ export interface AfterSection {
   from: number; // the points from..to (inclusive) are the section
   to: number;
   end: LngLat; // the last point
+  merc: Float64Array; // the points of the section in Web Mercator, for the hit test
+  box: [number, number, number, number]; // the bounds of merc
 }
 
 export interface SpiderMap {
@@ -45,7 +48,8 @@ export function spiderMap(d: Core, lines: Map<PatternKey, DecodedLine>, s: Spide
       features.push(feature("after", sec.after));
       extendCoords(bounds, l.coords, ...sec.after);
       const [from, to] = sec.after;
-      after.push({ pid: p.pid, line: lineId, dir, coords: l.coords, from, to, end: [l.coords[2 * to]!, l.coords[2 * to + 1]!] });
+      const merc = mercator(l.coords, from, to);
+      after.push({ pid: p.pid, line: lineId, dir, coords: l.coords, from, to, end: [l.coords[2 * to]!, l.coords[2 * to + 1]!], merc, box: mercBounds(merc) });
     }
   }
   return { data: { type: "FeatureCollection", features }, bounds, after };

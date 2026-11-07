@@ -1,5 +1,5 @@
 // prod_design 5.6: the stop pins. The stops of the selected station, as roundels (app_design 3.4).
-// The selected stop is the large pin. A click opens the stop view.
+// The selected stop is the large pin. A click opens the stop view. The pointer on a pin shows its tooltip.
 import type { Map, Marker } from "maplibre-gl";
 import type { Core } from "../data/load";
 import type { StopKey } from "../data/types";
@@ -18,12 +18,16 @@ export class Pins {
   pins: Pin[] = [];
   private id = "";
 
-  constructor(private map: Map) {}
+  constructor(
+    private map: Map,
+    private hover: { enter: (k: StopKey, el: HTMLElement) => void; leave: () => void },
+  ) {}
 
   set(d: Core, keys: StopKey[], selected: StopKey | null): void {
     const id = `${keys.join()}|${selected ?? ""}`;
     if (id === this.id) return;
     this.id = id;
+    if (this.pins.some((p) => p.el.matches(":hover"))) this.hover.leave();
     for (const p of this.pins) p.marker.remove();
     this.pins = keys.map((key) => {
       const r = stopRoundel(d, key);
@@ -34,6 +38,8 @@ export class Pins {
       roundel.className = r.stand ? "roundel stand" : "roundel";
       roundel.textContent = r.text;
       el.append(roundel);
+      el.addEventListener("mouseenter", () => this.hover.enter(key, el));
+      el.addEventListener("mouseleave", () => this.hover.leave());
       el.addEventListener("click", (e) => {
         e.stopPropagation();
         go(viewHash({ kind: "stop", key }));

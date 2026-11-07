@@ -5,15 +5,18 @@ import type { GeoJSONSource, LngLatLike, Map, PaddingOptions } from "maplibre-gl
 import { fit, FIT_MIN_ZOOM } from "../model/fit";
 import type { Bounds, LngLat } from "../model/geo";
 import { MAX_ZOOM, MIN_ZOOM } from "../params";
-import { core, cover, lines, reduceMotion, scheme, view, wide, type Cover } from "../state/signals";
+import type { PatternKey } from "../data/types";
+import { core, cover, highlight, lines, reduceMotion, rowHover, scheme, view, wide, type Cover } from "../state/signals";
 import { spider } from "../state/spider";
 import { AttributionControl } from "./attributionControl";
 import { readColors, type Colors } from "./colors";
 import { homeSource } from "./home";
+import { MapHover } from "./hover";
 import { applyLayers, layerSpecs, SOURCES, type LayerState, type SourceId } from "./layers";
 import { maplibregl } from "./maplibre";
+import { overlayLayer } from "./overlay";
 import { Pins } from "./pins";
-import { spiderMap, type SpiderMap } from "./spider";
+import { spiderMap, type AfterSection, type SpiderMap } from "./spider";
 import { stationsSource } from "./stations";
 import { keepClientLayers, styleUrl, transformRequest } from "./style";
 
@@ -120,7 +123,7 @@ export function startMap(container: HTMLElement): void {
   const source = (id: SourceId) => map.getSource<GeoJSONSource>(id)!;
   const layerState = (): LayerState => {
     const s = spider.peek();
-    return { served: s ? [...s.served] : null, station: s?.station ?? null };
+    return { served: s ? [...s.served] : null, station: s?.station ?? null, highlight: highlight.peek() };
   };
 
   // The sources, empty, and the layers in the order of layers.ts. After a change of the colour scheme,
@@ -168,8 +171,14 @@ export function startMap(container: HTMLElement): void {
 
   // The spider graph (app_design 6.4): the view source, the station dots, the pins, and one fit for
   // each spider graph, when its lines are loaded.
-  const pins = new Pins(map);
   let shown: SpiderMap | null = null;
+  let sections: ReadonlyMap<PatternKey, AfterSection> | null = null;
+  const hover = new MapHover(map, overlayLayer(), {
+    core: () => core.peek(),
+    sections: () => sections,
+    ctx: () => spider.peek()?.ctx ?? null,
+  });
+  const pins = new Pins(map, { enter: (k, el) => hover.pinEnter(k, el), leave: () => hover.pinLeave() });
   let shownFor: unknown = null;
   let fitted: unknown = null;
   const syncView = () => {
@@ -180,6 +189,7 @@ export function startMap(container: HTMLElement): void {
     if (key !== shownFor) {
       shownFor = key;
       shown = d && s && l ? spiderMap(d, l, s) : null;
+      sections = shown && new globalThis.Map(shown.after.map((a) => [a.pid, a]));
       source("view").setData(shown?.data ?? EMPTY);
     }
     applyLayers(map, colors, layerState());
@@ -195,6 +205,31 @@ export function startMap(container: HTMLElement): void {
     void lines.value;
     if (d) pins.set(d, s?.pins ?? [], s?.stop ?? null);
     whenStyle(syncView);
+  });
+
+  // A new view closes the tooltip and the route menu.
+  effect(() => {
+    void view.value;
+    hover.end();
+    hover.menu.close();
+  });
+
+  // app_design 6.4: the highlighted routes (from the map hover, a list row or a row of the route menu).
+  effect(() => {
+    void highlight.value;
+    whenStyle(() => applyLayers(map, colors, layerState()));
+  });
+
+  // app_design 5.6: the hover ring at the stop or the station of the row under the pointer.
+  const syncRing = () => {
+    const d = core.peek();
+    const r = rowHover.peek();
+    const at = d && r ? (r.kind === "stop" ? d.stops[r.key] && [d.stops[r.key]![3], d.stops[r.key]![2]] : d.stations[r.key] && [d.stations[r.key]![2], d.stations[r.key]![1]]) : null;
+    source("hover").setData(at ? { type: "Feature", properties: {}, geometry: { type: "Point", coordinates: at } } : EMPTY);
+  };
+  effect(() => {
+    void rowHover.value;
+    whenStyle(syncRing);
   });
 
   // prod_design 5.2: a change of the colour scheme changes the basemap and keeps the layers of the client.

@@ -99,7 +99,7 @@ test.describe("basemap and colour scheme (prod_design 5.2)", () => {
     // The client layers are above the basemap, in the order of prod_design 5.4.
     const ids = await page.evaluate(() => window.__map!.getStyle().layers.map((l) => l.id));
     const at = ids.indexOf("home-lines");
-    expect(ids.slice(at)).toEqual(["home-lines", "spider-behind", "spider-after", "station-dots"]);
+    expect(ids.slice(at)).toEqual(["home-lines", "spider-behind", "spider-after", "station-dots", "highlight", "hover-ring"]);
   });
 
   test("?theme=dark overrides the system setting", async ({ page }) => {

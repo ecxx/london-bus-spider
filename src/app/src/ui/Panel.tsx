@@ -8,7 +8,7 @@
 // The same value gives the cover signal: the part of the window that the panel covers (the map padding).
 import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { viewHash } from "../model/url";
-import { core, cover, folded, loadError, query, reduceMotion, view, wide, type Cover } from "../state/signals";
+import { core, cover, folded, loadError, query, reduceMotion, rowHover, view, wide, type Cover } from "../state/signals";
 import { ViewHeader } from "./headers";
 import { BusIcon, ChevronUp, SearchIcon } from "./marks";
 import { ScrollContext } from "./scroll";
@@ -22,6 +22,15 @@ const PHONE_HOME_MAX = 0.46;
 
 const sameCover = (a: Cover, b: Cover) =>
   a.top === b.top && a.right === b.right && a.bottom === b.bottom && a.left === b.left && a.fold === b.fold;
+
+// app_design 5.6: the stop or the station of the row under the pointer, for the hover ring.
+function onRowOver(e: MouseEvent): void {
+  const r = (e.target as Element).closest?.<HTMLElement>(".row[data-stop], .row[data-station]");
+  const next = r?.dataset.stop ? { kind: "stop" as const, key: r.dataset.stop } : r?.dataset.station ? { kind: "station" as const, key: r.dataset.station } : null;
+  const now = rowHover.peek();
+  if (next?.key !== now?.key || next?.kind !== now?.kind) rowHover.value = next;
+}
+const onRowLeave = () => (rowHover.value = null);
 
 function setFolded(on: boolean, setFolding: (v: boolean) => void): void {
   if (on === folded.peek()) return;
@@ -175,7 +184,7 @@ export function Panel() {
           <kbd>/</kbd>
         </div>
       </div>
-      <div class="results" ref={resultsRef} />
+      <div class="results" ref={resultsRef} onMouseOver={onRowOver} onMouseLeave={onRowLeave} />
       <div
         class="peek"
         onClick={(e) => {
@@ -184,7 +193,7 @@ export function Panel() {
       >
         {d && isFolded && !folding && <ViewHeader d={d} view={v} />}
       </div>
-      <div class="scroll" id="panel-content" ref={contentRef}>
+      <div class="scroll" id="panel-content" ref={contentRef} onMouseOver={onRowOver} onMouseLeave={onRowLeave}>
         <div ref={innerRef}>
           {d ? (
             <ViewContent d={d} view={v} />

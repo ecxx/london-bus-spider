@@ -2,10 +2,11 @@
 // The stop chips, the filter chips and the list of routes.
 import type { Core } from "../data/load";
 import type { StopKey } from "../data/types";
+import { highlights } from "../model/hover";
 import type { Filter } from "../model/spider";
 import { stopLabel, stopRoundel } from "../model/text";
 import { viewHash } from "../model/url";
-import { filter } from "../state/signals";
+import { filter, highlight } from "../state/signals";
 import type { Spider } from "../state/spider";
 import { Badge, ChevronRight, Roundel } from "./marks";
 
@@ -45,7 +46,10 @@ function StopChips({ d, s }: { d: Core; s: Spider }) {
   );
 }
 
+// app_design 6.4: the pointer on a row highlights that direction of the route. The rows of the
+// highlighted routes are marked, and the other rows are dimmed.
 export function SpiderView({ d, s }: { d: Core; s: Spider }) {
+  const h = highlight.value;
   return (
     <>
       <StopChips d={d} s={s} />
@@ -59,10 +63,16 @@ export function SpiderView({ d, s }: { d: Core; s: Spider }) {
         </div>
       </div>
       {s.shown.length ? (
-        <ul class="list services">
+        <ul class={h ? "list services has-hot" : "list services"} onMouseLeave={() => (highlight.value = null)}>
           {s.shown.map((r) => (
             <li key={`${r.line.id}|${r.dir}`}>
-              <a class="row" href={viewHash({ kind: "route", line: r.line.id, dir: r.dir, ctx: s.ctx })} data-line={r.line.id} data-dir={r.dir}>
+              <a
+                class={highlights(h, r.line.id, r.dir) ? "row is-hot" : "row"}
+                href={viewHash({ kind: "route", line: r.line.id, dir: r.dir, ctx: s.ctx })}
+                data-line={r.line.id}
+                data-dir={r.dir}
+                onMouseEnter={() => (highlight.value = { lines: [r.line.id], dir: r.dir })}
+              >
                 <Badge line={r.line} />
                 <span class="row-main">
                   <span class="row-title">

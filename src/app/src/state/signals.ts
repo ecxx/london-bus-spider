@@ -2,7 +2,8 @@
 // the code in map/ reads them in effect functions.
 import { signal } from "@preact/signals";
 import type { Core } from "../data/load";
-import type { DecodedLine, Direction, LineId, PatternKey, StationKey, StopKey } from "../data/types";
+import type { DecodedLine, PatternKey, StationKey, StopKey } from "../data/types";
+import type { Highlight } from "../model/hover";
 import type { Filter } from "../model/spider";
 import type { View } from "../model/url";
 import { PHONE_MAX_PX } from "../params";
@@ -18,7 +19,7 @@ export type HomeTab = "routes" | "stations";
 export const homeTab = signal<HomeTab>("routes");
 export const homeScroll = signal<Record<HomeTab, number>>({ routes: 0, stations: 0 });
 export const filter = signal<Filter>("all");
-export const highlight = signal<{ lines: LineId[]; dir: Direction | null } | null>(null);
+export const highlight = signal<Highlight | null>(null);
 export const rowHover = signal<{ kind: "stop"; key: StopKey } | { kind: "station"; key: StationKey } | null>(null);
 export const query = signal("");
 
