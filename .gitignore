@@ -1,0 +1,36 @@
+# Secrets
+.env
+.env.*
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Data (TfL downloads and generated exports; rebuild with the modules in src/)
+data/
+*.part
+
+# Design work (private for now)
+design/
+
+# Local notes and assistant config
+docs/
+CLAUDE.md
+.claude/
+
+# Front-end (for src/app/)
+node_modules/
+dist/
+.vite/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+*.swp
