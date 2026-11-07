@@ -76,5 +76,5 @@ export function matchRange(name: string, text: string): [number, number] | null 
 export function stationResultText(d: Core, key: StationKey): string {
   const ks = d.stationStops.get(key) ?? [];
   const lines = new Set(ks.flatMap((k) => (d.stopPatterns.get(k) ?? []).map((p) => d.patterns[p]![0])));
-  return `${stopsText(ks.map((k) => ({ indicator: d.stops[k]![1], name: stopName(d, k) })))} · ${routesText(lines.size)}`;
+  return `${stopsText(ks.map((k) => ({ indicator: d.stops[k]![1], heading: d.stops[k]![5], name: stopName(d, k) })))} · ${routesText(lines.size)}`;
 }

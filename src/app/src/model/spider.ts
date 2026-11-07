@@ -61,7 +61,7 @@ export function spiderRows(d: Core, selected: StopKey[], station: boolean): Spid
     const ends = pats.length - pats.filter((p) => !p.last).length;
 
     const sub: string[] = [];
-    if (station) sub.push(stopsText(stops.map((k) => ({ indicator: d.stops[k]![1], name: stopName(d, k) }))));
+    if (station) sub.push(stopsText(stops.map((k) => ({ indicator: d.stops[k]![1], heading: d.stops[k]![5], name: stopName(d, k) }))));
     if (!dests.length) sub.push("Ends here");
     else if (ends) sub.push("Some buses end here");
     const regular = pids.filter((p) => !isLimited(d, p));

@@ -13,15 +13,18 @@ const NONE: StopCode = { kind: "none", code: "", text: "" };
 const ARROWS: Record<string, string> = { N: "↑", NE: "↗", E: "→", SE: "↘", S: "↓", SW: "↙", W: "←", NW: "↖" };
 
 const LETTER = /^(?:Stop\s+)?([A-Z0-9]{1,3})$/; // "Stop RC", or a bare code "C"
-const STAND = /^Stand(?:\s+([A-Z0-9]{1,3}))?$/; // "Stand GF", or "Stand" with no code
+const STAND = /^(Stand|Bay)(?:\s+([A-Z0-9]{1,3}))?$/; // "Stand GF", "Bay A", or "Stand" with no code
 const HEADING = /^(?:->\s*([NSEW]{1,2})(\d*)|([NSEW]{1,2})-bound)$/; // "->NW", "->W1", "NW-bound"
 
-export function parseIndicator(ind: string | null): StopCode {
+// heading: position 5 of stops (export_format 4.2.1). If it is there, the code is its arrow and the
+// text is the indicator, for example "opp".
+export function parseIndicator(ind: string | null, heading?: string | null): StopCode {
+  if (ind && heading && ARROWS[heading]) return { kind: "heading", code: ARROWS[heading]!, text: ind };
   if (!ind) return NONE;
   let m = LETTER.exec(ind);
   if (m) return { kind: "letter", code: m[1]!, text: `Stop ${m[1]}` };
   m = STAND.exec(ind);
-  if (m) return m[1] ? { kind: "stand", code: m[1], text: `Stand ${m[1]}` } : { kind: "stand", code: "", text: "Stand" };
+  if (m) return m[2] ? { kind: "stand", code: m[2], text: `${m[1]} ${m[2]}` } : { kind: "stand", code: "", text: m[1]! };
   m = HEADING.exec(ind);
   const dir = m && (m[1] ?? m[3]);
   if (m && dir && ARROWS[dir]) {
@@ -31,9 +34,9 @@ export function parseIndicator(ind: string | null): StopCode {
   return otherIndicator(ind);
 }
 
-// D18: an indicator that is not in the table of app_design 3.5, for example "opp", "adj",
-// "Northbound" or "Stop ->E". Current rule (the rule of the design demo): the stop has no code.
-// The roundel shows "•" and the text form is the stop name.
+// An indicator that is not in the table of app_design 3.5 and has no heading, for example "opp" on
+// a stop with no compass point (D18): the stop has no code. The roundel shows "•" and the text form
+// is the stop name.
 export function otherIndicator(_ind: string): StopCode {
   return NONE;
 }
@@ -45,8 +48,8 @@ export const roundelText = (c: StopCode): string => c.code || "•";
 export const stopLabel = (c: StopCode, name: string): string => c.text || name;
 
 // app_design 3.5: the stops of a station. "Stops A, B" if all stops have a letter, else the text forms.
-export function stopsText(stops: { indicator: string | null; name: string }[]): string {
-  const codes = stops.map((s) => parseIndicator(s.indicator));
+export function stopsText(stops: { indicator: string | null; heading?: string; name: string }[]): string {
+  const codes = stops.map((s) => parseIndicator(s.indicator, s.heading));
   if (codes.length && codes.every((c) => c.kind === "letter")) {
     return (codes.length === 1 ? "Stop " : "Stops ") + codes.map((c) => c.code).join(", ");
   }

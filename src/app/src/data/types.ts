@@ -10,8 +10,15 @@ export type Direction = "inbound" | "outbound";
 export type ServiceClass = "day" | "night" | "24-hour" | "limited";
 
 // export_format 4.2
-export type StopRecord = [name: string, indicator: string | null, lat: number, lon: number, station: StationKey];
-export const STOP = { name: 0, indicator: 1, lat: 2, lon: 3, station: 4 } as const;
+export type StopRecord = [
+  name: string,
+  indicator: string | null,
+  lat: number,
+  lon: number,
+  station: StationKey,
+  heading?: string, // export_format 4.2.1: only if the code comes from the compass point
+];
+export const STOP = { name: 0, indicator: 1, lat: 2, lon: 3, station: 4, heading: 5 } as const;
 
 // export_format 4.3
 export type StationRecord = [name: string, lat: number, lon: number];

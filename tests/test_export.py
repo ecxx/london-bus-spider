@@ -16,7 +16,7 @@ import unittest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from export import build, write                    # noqa: E402
-from export.build import decode_polyline, encode_polyline   # noqa: E402
+from export.build import TABLE, decode_polyline, encode_polyline, indicator   # noqa: E402
 from patterns.data import project_root            # noqa: E402
 
 FOLDER = os.path.join(project_root(), "data", "data_131026")
@@ -53,6 +53,32 @@ class Export(unittest.TestCase):
         self.assertEqual(stations["490G00007856"], ["Harrow Road", 51.44682, -0.45768])
         for key, stop in stops.items():
             self.assertIn(stop[4], stations, key)
+
+    def test_indicators(self):
+        """Section 4.2.1."""
+        cases = {("stop V", None): "Stop V", ("Stop ->E", "E"): "->E", (">SE", "SE"): "->SE",
+                 ("E-Bound", "E"): "E-bound", ("Northbound", "N"): "N-bound",
+                 ("eastbound", "E"): "E-bound", ("Stops 1 - 5", "S"): "Stop 1",
+                 ("Bay RQ", "N"): "Bay RQ", ("Stop C", "N"): "Stop C", ("->W1", "W"): "->W1",
+                 (None, "N"): None}
+        for (ind, compass), out in cases.items():
+            self.assertEqual(indicator(ind, compass), (out, None), ind)
+        for ind, compass in (("opp", "SE"), ("o/s 72", "W"), ("just after", "SW")):
+            self.assertEqual(indicator(ind, compass), (ind, compass), ind)
+        self.assertEqual(indicator("opp", None), ("opp", None))
+        stops = self.files["stops"]
+        self.assertEqual(stops["03700082"][1::4], ["opp", "SE"])  # Cedar Way
+        self.assertEqual(stops["03700083"][1::4], ["adj", "NW"])  # Cedar Way
+        self.assertEqual(stops["490019476N"][1], "->N")         # ">N", compass point NW
+        self.assertEqual(len(stops["490019476N"]), 5)
+        headed = [s for s in stops.values() if len(s) == 6]
+        self.assertEqual(len(headed), 750)
+        for s in headed:
+            self.assertFalse(TABLE.match(s[1]), s)
+        other = sorted(s[1] for s in stops.values()
+                       if len(s) == 5 and s[1] is not None and not TABLE.match(s[1]))
+        self.assertEqual(len(other), 21)
+        self.assertEqual(set(other), {"opp", "adj", "o/s", "inside"})
 
     def test_patterns(self):
         stops = self.files["stops"]

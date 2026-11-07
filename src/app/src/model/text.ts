@@ -33,7 +33,7 @@ export const routesText = (n: number): string => (n === 1 ? "1 route" : `${n} ro
 export const stopName = (d: Core, k: StopKey): string => tidy(d.stops[k]![0]);
 export const stationName = (d: Core, k: StationKey): string => tidy(d.stations[k]![0]);
 export const stationOf = (d: Core, k: StopKey): StationKey => d.stops[k]![4];
-export const stopCode = (d: Core, k: StopKey) => parseIndicator(d.stops[k]![1]);
+export const stopCode = (d: Core, k: StopKey) => parseIndicator(d.stops[k]![1], d.stops[k]![5]);
 export const stopLabel = (d: Core, k: StopKey): string => labelOf(stopCode(d, k), stopName(d, k));
 export const firstStopName = (d: Core, pid: PatternKey): string => stopName(d, d.patterns[pid]![4][0]!);
 export const lastStopName = (d: Core, pid: PatternKey): string => stopName(d, d.patterns[pid]![4].at(-1)!);

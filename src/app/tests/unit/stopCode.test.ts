@@ -2,8 +2,8 @@ import { describe, expect, test } from "vitest";
 import { parseIndicator, roundelText, stopLabel, stopsText } from "../../src/model/stopCode";
 import { HAS_EXPORT, getCore } from "./fixtures";
 
-const code = (ind: string | null) => {
-  const c = parseIndicator(ind);
+const code = (ind: string | null, heading?: string) => {
+  const c = parseIndicator(ind, heading);
   return [roundelText(c), stopLabel(c, "The Stop Name"), c.kind];
 };
 
@@ -15,6 +15,7 @@ describe("stop codes (app_design 3.5)", () => {
     expect(code("NW-bound")).toEqual(["↖", "NW-bound", "heading"]);
     expect(code("->W1")).toEqual(["←1", "W-bound 1", "heading"]);
     expect(code("Stand GF")).toEqual(["GF", "Stand GF", "stand"]);
+    expect(code("Bay RQ")).toEqual(["RQ", "Bay RQ", "stand"]);
     expect(code(null)).toEqual(["•", "The Stop Name", "none"]);
   });
 
@@ -32,8 +33,17 @@ describe("stop codes (app_design 3.5)", () => {
     expect(code("Stand")).toEqual(["•", "Stand", "stand"]);
   });
 
+  test("a heading from the compass point: the code is the arrow, the text is the indicator", () => {
+    expect(code("opp", "SE")).toEqual(["↘", "opp", "heading"]);
+    expect(code("o/s 72", "W")).toEqual(["←", "o/s 72", "heading"]);
+    expect(code("opp", "XX")).toEqual(["•", "The Stop Name", "none"]);
+    const s = (indicator: string, heading?: string) => ({ indicator, heading, name: "Cedar Way" });
+    expect(stopsText([s("opp", "SE"), s("adj", "NW")])).toBe("opp, adj");
+    expect(stopsText([s("Stop A"), s("opp", "SE")])).toBe("Stop A, opp");
+  });
+
   test("D18: an indicator that is not in the table has no code", () => {
-    for (const ind of ["opp", "adj", "o/s 72", "Northbound", "Stop ->E", ">SE", "stop V", "Bay A", "ABCD", "->NS"]) {
+    for (const ind of ["opp", "adj", "o/s", "inside", "ABCD", "->NS"]) {
       expect(code(ind), ind).toEqual(["•", "The Stop Name", "none"]);
     }
   });
@@ -51,13 +61,16 @@ describe("stop codes (app_design 3.5)", () => {
     const d = await getCore();
     const counts: Record<string, number> = {};
     let other = 0;
-    for (const [, ind] of Object.values(d.stops)) {
-      const c = parseIndicator(ind);
+    let headed = 0;
+    for (const [, ind, , , , heading] of Object.values(d.stops)) {
+      const c = parseIndicator(ind, heading);
       counts[c.kind] = (counts[c.kind] ?? 0) + 1;
       if (c.kind === "none" && ind !== null) other++;
+      if (heading) headed++;
     }
-    expect(counts).toEqual({ letter: 13_837, heading: 5_231, stand: 23, none: 72 + 822 });
-    expect(other).toBe(822);
+    expect(headed).toBe(750);
+    expect(counts).toEqual({ letter: 13_837 + 7, heading: 5_231 + 789, stand: 23 + 5, none: 72 + 21 });
+    expect(other).toBe(21);
   });
 
   test.skipIf(!HAS_EXPORT)("the stops of a station are in the order of their codes", async () => {

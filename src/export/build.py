@@ -77,6 +77,40 @@ def coordinate(x):
     return round(x, DECIMALS)
 
 
+# Section 4.2.1: the forms of the code table of app_design.md, section 3.5.
+COMPASS = ("N", "NE", "E", "SE", "S", "SW", "W", "NW")
+TABLE = re.compile(r"^(?:(?:Stop\s+)?[A-Z0-9]{1,3}|(?:Stand|Bay)(?:\s+[A-Z0-9]{1,3})?"
+                   r"|->\s*(%s)\d*|(%s)-bound)$" % ("|".join(COMPASS), "|".join(COMPASS)))
+WORD_BOUND = re.compile(r"^(north|south)?(east|west)?bound$", re.I)     # "Northbound"
+RANGE = re.compile(r"^Stops\s+([A-Z0-9]{1,3})\s*-\s*[A-Z0-9]{1,3}$")    # "Stops 1 - 5"
+
+
+def indicator(ind, compass):
+    """Section 4.2.1: (indicator, heading). The indicator is in a form of the code table if
+    possible. The heading is the compass point if the indicator has no such form, else None."""
+    if ind is None:
+        return None, None
+    s = re.sub(r"^(stops?|stand|bay)\b", lambda m: m.group(1).capitalize(), ind.strip(), flags=re.I)
+    s = re.sub(r"^(?:Stop\s*)?>", "->", re.sub(r"^Stop\s*->", "->", s))
+    s = re.sub(r"^([NSEW]{1,2})-bound$", lambda m: m.group(1).upper() + "-bound", s, flags=re.I)
+    m = WORD_BOUND.match(s)
+    if m and (m.group(1) or m.group(2)):
+        s = "".join(g[0].upper() for g in m.groups() if g) + "-bound"
+    m = RANGE.match(s)
+    if m:
+        s = "Stop " + m.group(1)
+    if TABLE.match(s):
+        return s, None
+    return ind, compass if compass in COMPASS else None
+
+
+def stop_record(s):
+    """Section 4.2: the record of a stop. Position 5 is only there if the stop has a heading."""
+    ind, heading = indicator(s["indicator"], s.get("compassPoint"))
+    out = [s["commonName"], ind, coordinate(s["lat"]), coordinate(s["lon"]), s["station"]]
+    return out + [heading] if heading else out
+
+
 def build(path):
     """Return {file name: data} for the files of section 4, without the manifest."""
     folder = Folder(path)
@@ -94,9 +128,7 @@ def build(path):
     if missing:
         raise ValueError("lines that are not in buses_master.json: %s" % ", ".join(missing))
 
-    out_stops = {k: [s["commonName"], s["indicator"], coordinate(s["lat"]), coordinate(s["lon"]),
-                     s["station"]]
-                 for k, s in sorted(folder.stops.items())}
+    out_stops = {k: stop_record(s) for k, s in sorted(folder.stops.items())}
     out_stations = {k: [s["commonName"], coordinate(s["lat"]), coordinate(s["lon"])]
                     for k, s in sorted(stations.items())}
     out_patterns, out_lines = {}, {}

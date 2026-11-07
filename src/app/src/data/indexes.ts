@@ -33,7 +33,7 @@ export function buildIndexes(stops: Stops, patterns: Patterns): Indexes {
   }
   for (const [st, keys] of stationStops) {
     if (keys.length < 2) continue;
-    const coded = keys.map((key) => ({ key, code: parseIndicator(stops[key]![1]).code }));
+    const coded = keys.map((key) => ({ key, code: parseIndicator(stops[key]![1], stops[key]![5]).code }));
     stationStops.set(st, coded.sort(compareStopCodes).map((s) => s.key));
   }
   return { stopPatterns, stationStops, lines };
