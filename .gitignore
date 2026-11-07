@@ -13,7 +13,7 @@ __pycache__/
 htmlcov/
 
 # Data (TfL downloads and generated exports; rebuild with the modules in src/)
-data/
+/data/
 *.part
 
 # Design work (private for now)
