@@ -1,0 +1,15 @@
+{
+  "name": "uk-busrouter",
+  "private": true,
+  "description": "The scripts of the application in src/app, from the project root. The packages are in src/app. Each script ends with -- so that the arguments go to the script in src/app.",
+  "scripts": {
+    "dev": "npm --prefix src/app run dev --",
+    "build": "npm --prefix src/app run build --",
+    "build:live": "npm --prefix src/app run build:live --",
+    "bundle": "npm --prefix src/app run bundle --",
+    "typecheck": "npm --prefix src/app run typecheck --",
+    "test": "npm --prefix src/app run test --",
+    "e2e": "npm --prefix src/app run e2e --",
+    "perf": "npm --prefix src/app run perf --"
+  }
+}
