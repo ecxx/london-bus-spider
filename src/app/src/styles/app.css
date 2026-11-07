@@ -217,7 +217,66 @@ a { color: inherit; }
 .chip.stop { padding: 0 10px 0 3px; }
 .chip.stop .roundel { width: 24px; height: 24px; font-size: 10.5px; } /* app_design 3.4: stop chip */
 
-/* ---------- Map marks (prod_design 5.6). z-index from the bottom: end labels, pins, the selected pin. ---------- */
+/* ---------- Map marks (prod_design 5.6). z-index from the bottom: station names, end labels, pins, the selected pin. ---------- */
+/* An end label (app_design 6.4): a dot at the end of the line, the label above it, or a bubble. The
+   marker element has no size: its point is the end. */
+.term { width: 0; height: 0; z-index: 1; }
+.term.is-dim { z-index: 0; }
+.term:hover, .term.is-open { z-index: 2; }
+.term.is-passive { pointer-events: none; } /* opened by the hover on a map line (map/endLabels.ts) */
+.term-dot {
+  position: absolute; left: 0; top: 0; translate: -50% -50%;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--stop-fill); border: 2px solid var(--red); pointer-events: none;
+}
+.term-dot.night { border-color: var(--night); }
+.term.xs .term-dot { width: 8px; height: 8px; }
+.term-in {
+  position: absolute; left: 0; top: 0;
+  translate: -50% calc(-100% - 8px); /* LABEL_DY in map/endLabels.ts */
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 3px;
+  width: max-content; max-width: 150px;
+  padding: 4px; border-radius: 8px;
+  background: var(--panel); box-shadow: 0 1px 2px rgba(0, 0, 0, .15), 0 4px 12px rgba(0, 0, 0, .15);
+}
+.term-in::after {
+  content: ""; position: absolute; left: 50%; bottom: -5px; translate: -50% 0; rotate: 45deg;
+  width: 10px; height: 10px; background: var(--panel); border-radius: 0 0 2px 0;
+}
+.term.xs .term-in { padding: 3px; gap: 2px; border-radius: 6px; }
+.term .badge { position: relative; z-index: 1; cursor: pointer; transition: opacity .15s; }
+.term .badge.is-dim { opacity: .2; }
+/* app_design 5.4: a label shows its first badges and "+n". Hover, or a highlighted route, opens it. */
+.term .more { display: none; }
+.term:hover .more, .term.is-open .more { display: contents; }
+.term:hover .count, .term.is-open .count { display: none; }
+.term .count {
+  position: relative; z-index: 1;
+  display: inline-flex; align-items: center; height: 20px; padding: 0 5px; border-radius: 4px;
+  background: var(--hover); color: var(--ink-2); font-size: 11.5px; font-weight: 800; cursor: default;
+}
+.term .count.xs { height: 16px; font-size: 10px; padding: 0 4px; border-radius: 3px; }
+/* A bubble: a label that overlaps a placed mark. The number of its routes, at its end. */
+.term-mini {
+  display: none; position: absolute; left: 0; top: 0; translate: -50% calc(-100% - 6px);
+  min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; place-items: center;
+  background: var(--panel); color: var(--red-ink); box-shadow: inset 0 0 0 2px var(--red), 0 1px 3px rgba(0, 0, 0, .25);
+  font-size: 10.5px; font-weight: 800; cursor: default;
+}
+.term-mini.night { color: var(--night); box-shadow: inset 0 0 0 2px var(--night), 0 1px 3px rgba(0, 0, 0, .25); }
+.term.is-collapsed .term-in { display: none; }
+.term.is-collapsed .term-mini { display: grid; }
+.term.is-collapsed:hover .term-in, .term.is-collapsed.is-open .term-in { display: flex; }
+.term.is-collapsed:hover .term-mini, .term.is-collapsed.is-open .term-mini { display: none; }
+
+/* A station name (app_design 5.4), at the right of its dot. */
+.st-label { width: 0; height: 0; z-index: 0; pointer-events: none; }
+.st-label span {
+  position: absolute; left: 11px; top: 0; translate: 0 -50%;
+  white-space: nowrap; font-size: 12px; font-weight: 700; color: var(--ink);
+  text-shadow: 0 0 3px var(--panel), 0 0 3px var(--panel), 0 0 2px var(--panel);
+}
+
 .pin { z-index: 3; cursor: pointer; }
 .pin .roundel {
   width: 20px; height: 20px; font-size: 9px;

@@ -4,7 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 import type { FeatureCollection } from "geojson";
 import type { GeoJSONSource } from "maplibre-gl";
 import { loadEnv } from "vite";
-import { PHONE, WIDE, afterFold, mapReady, open } from "./helpers";
+import { PHONE, WIDE, afterFold, mapReady, open, panelSettled } from "./helpers";
 
 const CHARING_CROSS: [number, number] = [-0.1248, 51.5081];
 
@@ -35,6 +35,7 @@ test.describe("first view (app_design 5.2)", () => {
     await page.setViewportSize(PHONE);
     await open(page, "#/");
     await mapReady(page);
+    await panelSettled(page); // the sheet gets taller when the data loads: read it at its end height
     const panel = (await page.locator(".panel").boundingBox())!;
     const p = await startPoint(page);
     expect(p.zoom).toBe(12);
@@ -155,8 +156,10 @@ test.describe("attribution (app_design 5.1)", () => {
     await open(page, "#/");
     await mapReady(page);
     await expect(text(page)).toBeVisible();
-    const sheet = (await page.locator(".panel").boundingBox())!;
-    expect((await text(page).boundingBox())!.y + (await text(page).boundingBox())!.height).toBeLessThanOrEqual(sheet.y);
+    // One read of each box: the text collapses ATTRIB_MS after the map opens.
+    const [box, full] = await Promise.all([page.locator(".panel").boundingBox(), text(page).boundingBox()]);
+    const sheet = box!;
+    expect(full!.y + full!.height).toBeLessThanOrEqual(sheet.y);
     // A move of the map by the user.
     await page.mouse.move(200, 200);
     await page.mouse.down();

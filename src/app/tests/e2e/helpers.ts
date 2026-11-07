@@ -30,13 +30,14 @@ export async function mapReady(page: Page, homeLines = false): Promise<void> {
   );
 }
 
-// Wait for the fit of a view (prod_design 5.7): the view source has data, and no fit waits or moves the map.
+// Wait for the fit of a view (prod_design 5.7): the view source has data, no fit waits or moves the map,
+// and the end labels are placed for the zoom of the fit (the settle of prod_design 5.8).
 export async function fitDone(page: Page): Promise<void> {
   await page.waitForFunction(
     () => {
       const m = window.__map;
       const src = m?.getSource("view");
-      return !!src && (src.serialize().data as Fc).features.length > 0 && !window.__fitBusy!() && !m!.isMoving();
+      return !!src && (src.serialize().data as Fc).features.length > 0 && !window.__fitBusy!() && !m!.isMoving() && window.__settled!();
     },
     null,
     { timeout: 30_000, polling: 100 },

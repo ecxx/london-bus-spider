@@ -21,6 +21,8 @@ const LINE_DY = 8; // px between the pointer and a route tooltip
 const DOT_DY = 10; // px between a station dot and its tooltip
 const PIN_DY = 4; // px between a stop pin and its tooltip
 
+const onMarker = (e: MapMouseEvent): boolean => !!(e.originalEvent.target as Element | null)?.closest?.(".maplibregl-marker");
+
 export interface HoverSource {
   core: () => Core | null;
   sections: () => ReadonlyMap<PatternKey, AfterSection> | null; // the sections after the stop of the view
@@ -44,6 +46,8 @@ export class MapHover {
     this.tip = new Tooltip(layer, () => cover.peek());
     this.menu = new RouteMenu(map, layer, () => cover.peek(), (h) => (highlight.value = h));
     map.on("mousemove", (e) => {
+      // A marker (an end label, a pin, a station name) is above the lines: no route at the pointer.
+      if (onMarker(e)) return this.end();
       this.pt = e.point;
       if (!this.frame) this.frame = requestAnimationFrame(() => this.update());
     });
@@ -120,7 +124,7 @@ export class MapHover {
     if (key !== this.key) {
       this.key = key;
       this.tip.show(routesTip(items), x, y, LINE_DY);
-      this.setHighlight({ lines: [...new Set(items.map((i) => i.line.id))], dir: null });
+      this.setHighlight({ lines: [...new Set(items.map((i) => i.line.id))], dir: null, map: true });
     } else this.tip.move(x, y, LINE_DY);
     this.map.getCanvas().style.cursor = "pointer";
   }
@@ -142,7 +146,7 @@ export class MapHover {
 
   private click(e: MapMouseEvent): void {
     const d = this.src.core();
-    if (!d) return;
+    if (!d || onMarker(e)) return;
     const dot = this.dotAt(e.point);
     if (dot) {
       this.menu.close();

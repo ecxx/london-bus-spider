@@ -15,8 +15,8 @@ const litLines = (page: Page) =>
 
 // Points beside the sections after the stop, with the lines 5 px or less from each point. The lines come
 // from the view source and map.project, not from the hit test of the client. A point where a line is
-// 4.5 to 5.5 px away is not used (the line width and the rounding of the tiles), and a point near a pin
-// or under the panel is not used.
+// 4.5 to 5.5 px away is not used (the line width and the rounding of the tiles), and a point on or near
+// a marker (a pin, an end label: they are above the lines) or under the panel is not used.
 function samplePoints(page: Page, n: number) {
   return page.evaluate((n) => {
     const m = window.__map!;
@@ -25,7 +25,8 @@ function samplePoints(page: Page, n: number) {
       .filter((f) => f.properties!.part === "after")
       .map((f) => ({ line: f.properties!.line as string, pts: f.geometry.coordinates.map((c) => m.project(c as [number, number])) }));
     const panel = document.querySelector(".panel")!.getBoundingClientRect();
-    const pins = [...document.querySelectorAll(".pin")].map((e) => e.getBoundingClientRect());
+    const onMarker = (x: number, y: number) =>
+      [[0, 0], [-3, -3], [3, -3], [-3, 3], [3, 3]].some(([dx, dy]) => !!document.elementFromPoint(x + dx!, y + dy!)?.closest(".maplibregl-marker"));
     const dist = (pts: { x: number; y: number }[], x: number, y: number) => {
       let best = Infinity;
       for (let i = 1; i < pts.length; i++) {
@@ -48,7 +49,7 @@ function samplePoints(page: Page, n: number) {
       const x = p.x + (rnd() - 0.5) * 16;
       const y = p.y + (rnd() - 0.5) * 16;
       if (x < panel.right + 20 || x > innerWidth - 60 || y < 20 || y > innerHeight - 60) continue;
-      if (pins.some((r) => Math.hypot(r.x + r.width / 2 - x, r.y + r.height / 2 - y) < 40)) continue;
+      if (onMarker(x, y)) continue;
       const ds = lines.map((q) => ({ line: q.line, d: dist(q.pts, x, y) }));
       if (ds.some((q) => q.d > 4.5 && q.d < 5.5)) continue;
       out.push({ x, y, lines: [...new Set(ds.filter((q) => q.d <= 5).map((q) => q.line))].sort() });
@@ -99,6 +100,10 @@ test.describe("hover on the map (app_design 6.4, prod_design 5.5)", () => {
     expect(hot).toEqual(p!.lines);
     const opacity = JSON.stringify(await page.evaluate(() => window.__map!.getPaintProperty("spider-after", "line-opacity")));
     expect(opacity).toContain("0.12");
+    // The end labels of these routes open, and take no pointer events: the pointer stays on the line.
+    const open = await page.locator(".term.is-open").count();
+    expect(open).toBeGreaterThan(0);
+    await expect(page.locator(".term.is-open:not(.is-passive)")).toHaveCount(0);
     // Off the lines: no highlight, no tooltip.
     await page.mouse.move(1100, 60);
     const off = (await samplePoints(page, 60)).find((q) => q.lines.length === 0)!;

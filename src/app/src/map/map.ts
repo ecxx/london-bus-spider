@@ -10,6 +10,7 @@ import { core, cover, highlight, lines, reduceMotion, rowHover, scheme, view, wi
 import { spider } from "../state/spider";
 import { AttributionControl } from "./attributionControl";
 import { readColors, type Colors } from "./colors";
+import { EndLabels, StationNames, type PinBox } from "./endLabels";
 import { homeSource } from "./home";
 import { MapHover } from "./hover";
 import { applyLayers, layerSpecs, SOURCES, type LayerState, type SourceId } from "./layers";
@@ -22,6 +23,9 @@ import { keepClientLayers, styleUrl, transformRequest } from "./style";
 
 const START: { center: LngLatLike; zoom: number } = { center: [-0.1248, 51.5081], zoom: 12 }; // Charing Cross (app_design 5.2)
 const FOLD_MS = 250; // the map move of a fold on a phone (app_design 4.2)
+const SETTLE_MS = 150; // after a zoom, the end labels and the station names wait this time with no move (prod_design 5.8)
+const PIN_PX = 20; // the diameter of a stop pin, and of the selected pin (app_design 3.4)
+const PIN_SEL_PX = 36;
 
 const EMPTY: FeatureCollection = { type: "FeatureCollection", features: [] };
 
@@ -179,6 +183,38 @@ export function startMap(container: HTMLElement): void {
     ctx: () => spider.peek()?.ctx ?? null,
   });
   const pins = new Pins(map, { enter: (k, el) => hover.pinEnter(k, el), leave: () => hover.pinLeave() });
+  const endLabels = new EndLabels(map);
+  const names = new StationNames(map);
+
+  // prod_design 5.8: the settle. After a move with a zoom, wait until no move starts for SETTLE_MS; after
+  // a move with no zoom, at once. Then place the end labels and the station names. During a zoom, the
+  // markers move with the map and do not change.
+  const placeMarks = () => {
+    const d = core.peek();
+    if (!d) return;
+    const s = spider.peek();
+    const boxes: PinBox[] = (s?.pins ?? []).map((k) => ({ at: [d.stops[k]![3], d.stops[k]![2]], size: k === s?.stop ? PIN_SEL_PX : PIN_PX }));
+    endLabels.place(boxes);
+    const placeNames = () => names.place(d, s ? s.served : null, s?.station ?? null);
+    placeNames();
+    // The station names come from the rendered station dots: after a zoom, the tiles can still load.
+    if (!map.loaded()) map.once("idle", placeNames);
+  };
+  let placedZoom = NaN;
+  let settleTimer = 0;
+  const settle = () => {
+    clearTimeout(settleTimer);
+    settleTimer = 0;
+    placedZoom = map.getZoom();
+    placeMarks();
+  };
+  if (import.meta.env.DEV) window.__settled = () => !settleTimer && placedZoom === map.getZoom() && !map.isMoving() && map.loaded();
+  map.on("movestart", () => clearTimeout(settleTimer));
+  map.on("moveend", () => {
+    clearTimeout(settleTimer);
+    if (map.getZoom() !== placedZoom) settleTimer = window.setTimeout(settle, SETTLE_MS);
+    else settle();
+  });
   let shownFor: unknown = null;
   let fitted: unknown = null;
   const syncView = () => {
@@ -191,6 +227,10 @@ export function startMap(container: HTMLElement): void {
       shown = d && s && l ? spiderMap(d, l, s) : null;
       sections = shown && new globalThis.Map(shown.after.map((a) => [a.pid, a]));
       source("view").setData(shown?.data ?? EMPTY);
+      // app_design 6.4: the end-label groups of the spider graph, then their placement at the zoom now.
+      if (d && s && shown) endLabels.set(d, shown.after, s.selected.map((k): LngLat => [d.stops[k]![3], d.stops[k]![2]]), s.ctx);
+      else endLabels.clear();
+      settle();
     }
     applyLayers(map, colors, layerState());
     if (d && s && shown && fitted !== s) {
@@ -216,7 +256,7 @@ export function startMap(container: HTMLElement): void {
 
   // app_design 6.4: the highlighted routes (from the map hover, a list row or a row of the route menu).
   effect(() => {
-    void highlight.value;
+    endLabels.mark(highlight.value);
     whenStyle(() => applyLayers(map, colors, layerState()));
   });
 

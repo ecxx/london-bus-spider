@@ -6,9 +6,11 @@ import { compareLines } from "./order";
 import { isLimited, lastStopName } from "./text";
 
 // The highlighted routes: line IDs, and one direction (a list row) or all directions (dir null).
+// map: the highlight comes from the hover on the map lines.
 export interface Highlight {
   lines: LineId[];
   dir: Direction | null;
+  map?: boolean;
 }
 
 export const highlights = (h: Highlight | null, line: LineId, dir: Direction): boolean =>
