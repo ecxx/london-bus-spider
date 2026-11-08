@@ -11,13 +11,15 @@ import { render } from "preact";
 import { FormatError, loadCore, loadLines } from "./data/load";
 import { startMap } from "./map/map";
 import { startRouter } from "./state/router";
-import { core, forcedScheme, lines, loadError, scheme } from "./state/signals";
+import { chosenScheme, core, lines, loadError, scheme } from "./state/signals";
 import { App } from "./ui/App";
 
-// app_design 3.1: ?theme=light or ?theme=dark overrides the system colour scheme.
-if (forcedScheme) document.documentElement.dataset.theme = forcedScheme;
+// app_design 3.1: the scheme that the URL or the user chose overrides the system colour scheme.
 effect(() => {
-  document.documentElement.dataset.scheme = scheme.value;
+  const root = document.documentElement;
+  if (chosenScheme.value) root.dataset.theme = chosenScheme.value;
+  else delete root.dataset.theme;
+  root.dataset.scheme = scheme.value;
 });
 
 render(<App />, document.getElementById("app")!);

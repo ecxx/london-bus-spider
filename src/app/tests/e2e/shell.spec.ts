@@ -54,7 +54,7 @@ test.describe("each URL of app_design 4.3 opens its view", () => {
       "href",
       "https://tfl.gov.uk/corporate/terms-and-conditions/transport-data-service",
     );
-    await expect(about).toContainText("Bus data of 13 October 2026");
+    await expect(about).toContainText("Data last updated 13 October 2026");
     await page.getByRole("link", { name: "About", exact: true }).click(); // the link of the brand row
     await expect(h1(page)).toHaveText("About");
   });

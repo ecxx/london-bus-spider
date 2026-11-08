@@ -1,6 +1,6 @@
 // prod_design 6: the state that the panel and the map share. The components write the signals,
 // the code in map/ reads them in effect functions.
-import { signal } from "@preact/signals";
+import { computed, signal } from "@preact/signals";
 import type { Core } from "../data/load";
 import type { DecodedLine, PatternKey, StationKey, StopKey } from "../data/types";
 import type { Highlight } from "../model/hover";
@@ -23,13 +23,34 @@ export const highlight = signal<Highlight | null>(null);
 export const rowHover = signal<{ kind: "stop"; key: StopKey } | { kind: "station"; key: StationKey } | null>(null);
 export const query = signal("");
 
-// The colour scheme: ?theme=light or ?theme=dark overrides the system setting (app_design 3.1).
+// The colour scheme (app_design 3.1): ?theme=light or ?theme=dark, else the choice of the user, else the
+// system setting. index.html reads the same URL parameter and storage key before the first paint.
 export type Scheme = "light" | "dark";
-const forced = new URLSearchParams(location.search).get("theme");
-export const forcedScheme: Scheme | null = forced === "light" || forced === "dark" ? forced : null;
+const THEME_KEY = "theme"; // the localStorage key of the choice of the user
+const asScheme = (v: string | null): Scheme | null => (v === "light" || v === "dark" ? v : null);
+function savedScheme(): Scheme | null {
+  try {
+    return asScheme(localStorage.getItem(THEME_KEY));
+  } catch {
+    return null; // the browser blocks the storage
+  }
+}
+export const chosenScheme = signal<Scheme | null>(asScheme(new URLSearchParams(location.search).get("theme")) ?? savedScheme());
 const darkQuery = matchMedia("(prefers-color-scheme: dark)");
-export const scheme = signal<Scheme>(forcedScheme ?? (darkQuery.matches ? "dark" : "light"));
-if (!forcedScheme) darkQuery.addEventListener("change", (e) => (scheme.value = e.matches ? "dark" : "light"));
+const systemScheme = signal<Scheme>(darkQuery.matches ? "dark" : "light");
+darkQuery.addEventListener("change", (e) => (systemScheme.value = e.matches ? "dark" : "light"));
+export const scheme = computed<Scheme>(() => chosenScheme.value ?? systemScheme.value);
+
+// The control of the about view (app_design 6.7). null: follow the system setting.
+export function chooseScheme(s: Scheme | null): void {
+  chosenScheme.value = s;
+  try {
+    if (s) localStorage.setItem(THEME_KEY, s);
+    else localStorage.removeItem(THEME_KEY);
+  } catch {
+    // The choice stays for this page only.
+  }
+}
 
 // The window layout (app_design 4.1).
 const phoneQuery = matchMedia(`(max-width: ${PHONE_MAX_PX}px)`);

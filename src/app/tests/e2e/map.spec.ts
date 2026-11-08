@@ -119,6 +119,54 @@ test.describe("basemap and colour scheme (prod_design 5.2)", () => {
     ]);
   });
 
+  test("the control of the about view: System, Light and Dark, and a reload keeps the choice", async ({ page }) => {
+    const basemap = (name: RegExp) => page.waitForFunction((src) => new RegExp(src).test(window.__map?.getStyle()?.name ?? "") && !!window.__map!.getLayer("home-lines"), name.source);
+    const bg = () => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--bg").trim());
+    const button = (name: string) => page.locator(".about").getByRole("button", { name, exact: true });
+    const pressed = (name: string) => expect(button(name)).toHaveAttribute("aria-pressed", "true");
+    await page.emulateMedia({ colorScheme: "dark" });
+    await open(page, "#/about");
+    await mapReady(page, true);
+    await pressed("System");
+    await basemap(/^Dark Matter/);
+
+    await button("Light").click();
+    await pressed("Light");
+    await basemap(/^Positron/);
+    expect(await bg()).toBe("#F3F2EF");
+
+    await page.reload();
+    await pressed("Light");
+    await mapReady(page, true);
+    await basemap(/^Positron/);
+    expect(await bg()).toBe("#F3F2EF");
+
+    // A change of the system setting does not change the choice of the user.
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.emulateMedia({ colorScheme: "dark" });
+    expect(await bg()).toBe("#F3F2EF");
+
+    await button("System").click();
+    await pressed("System");
+    await basemap(/^Dark Matter/);
+    expect(await bg()).toBe("#111215");
+    expect(await page.evaluate(() => [localStorage.getItem("theme"), document.documentElement.dataset.theme ?? null])).toEqual([null, null]);
+
+    // System follows the system setting again, also after a reload.
+    await page.emulateMedia({ colorScheme: "light" });
+    await basemap(/^Positron/);
+    expect(await bg()).toBe("#F3F2EF");
+    await page.reload();
+    await pressed("System");
+
+    // Dark with a light system setting.
+    await mapReady(page, true);
+    await button("Dark").click();
+    await pressed("Dark");
+    await basemap(/^Dark Matter/);
+    expect(await bg()).toBe("#111215");
+  });
+
   test("?theme=dark overrides the system setting", async ({ page }) => {
     await page.emulateMedia({ colorScheme: "light" });
     await page.goto("/?theme=dark#/");

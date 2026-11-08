@@ -2,6 +2,13 @@
 import type { Core } from "../data/load";
 import { CARTO, GEOMNI, OS, OSM, TFL, TFL_TERMS } from "../map/attribution";
 import { datasetDate } from "../model/text";
+import { chooseScheme, chosenScheme, type Scheme } from "../state/signals";
+
+const SCHEMES: [Scheme | null, string][] = [
+  [null, "System"],
+  ["light", "Light"],
+  ["dark", "Dark"],
+];
 
 export function AboutView({ d }: { d: Core }) {
   const date = datasetDate(d.manifest.dataset);
@@ -20,7 +27,15 @@ export function AboutView({ d }: { d: Core }) {
         <li>{OS}</li>
         <li>{GEOMNI}</li>
       </ul>
-      {date && <p>Bus data of {date}</p>}
+      {date && <p>Data last updated {date}</p>}
+      <h2>Colour scheme</h2>
+      <div class="chip-row" role="group" aria-label="Colour scheme">
+        {SCHEMES.map(([s, label]) => (
+          <button key={label} class="chip" type="button" aria-pressed={chosenScheme.value === s} onClick={() => chooseScheme(s)}>
+            {label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
