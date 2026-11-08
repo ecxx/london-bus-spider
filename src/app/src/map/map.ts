@@ -30,7 +30,13 @@ const START: { center: LngLatLike; zoom: number } = { center: [-0.1248, 51.5081]
 // their basemap tiles.
 const CENTRE_BOX = { west: -0.6, south: 51.22, east: 0.33, north: 51.7 };
 const FOLD_MS = 250; // the map move of a fold on a phone (app_design 4.2)
+const foldEase = (t: number) => 1 - (1 - t) ** 5; // starts fast and stops slowly: near --fold-ease, the curve of the panel (app_design 4.2)
 const SETTLE_MS = 150; // after a zoom, the end labels and the station names wait this time with no move (prod_design 5.8)
+const WHEEL_END_MS = 120; // after a fit, the wheel is muted until no wheel event comes for this time (prod_design 5.8)
+// prod_design 5.8: the zoom speed of the demo (160 px of wheel for one zoom level; a trackpad pinch: 90 px).
+// MapLibre gives log2(2 / (1 + exp(-|px| x rate))) zoom levels for the px of one frame.
+const WHEEL_ZOOM_RATE = 1 / 82; // a wheel step of 100 px gives 0.625 zoom levels, as in the demo
+const TRACKPAD_ZOOM_RATE = 1 / 87; // small px: 120 px for one zoom level. MapLibre has one rate for a trackpad scroll and a pinch.
 const PIN_PX = 20; // the diameter of a stop pin, and of the selected pin (app_design 3.4)
 const PIN_SEL_PX = 36;
 
@@ -101,6 +107,28 @@ export function startMap(container: HTMLElement): void {
   map.touchZoomRotate.disableRotation();
   map.keyboard.disableRotation();
 
+  map.scrollZoom.setWheelZoomRate(WHEEL_ZOOM_RATE);
+  map.scrollZoom.setZoomRate(TRACKPAD_ZOOM_RATE);
+
+  // prod_design 5.8: mute after a fit. A wheel event during easeTo stops the fit, and the tail of a
+  // trackpad gesture continues for approximately 1 second. The listener is on the container, in the
+  // capture phase, so that it comes before the listener of MapLibre on the canvas container.
+  let muteTimer = 0; // not 0: the wheel is muted
+  const muteWheel = () => {
+    clearTimeout(muteTimer);
+    muteTimer = window.setTimeout(() => (muteTimer = 0), WHEEL_END_MS);
+  };
+  container.addEventListener(
+    "wheel",
+    (e) => {
+      if (!muteTimer) return;
+      e.preventDefault();
+      e.stopPropagation();
+      muteWheel();
+    },
+    { capture: true, passive: false },
+  );
+
   // The bottom controls: the last one added is at the top.
   map.addControl(new AttributionControl(), "bottom-right");
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
@@ -118,6 +146,7 @@ export function startMap(container: HTMLElement): void {
       const f = fit({ width: container.clientWidth, height: container.clientHeight, cover: c, wide: wide.peek() }, bounds, focus, minZoom);
       if (!f) return;
       map.stop();
+      muteWheel();
       refit = run;
       map.easeTo({ center: f.center, zoom: f.zoom, padding: padding(c), ...(reduceMotion.peek() ? { duration: 0 } : {}) });
     };
@@ -129,11 +158,16 @@ export function startMap(container: HTMLElement): void {
   // prod_design 5.7: the map padding is the area that the panel covers. Thus START is at the middle of
   // the free area. After a fold on a phone, the centre stays at the middle of the new free area.
   map.setPadding(padding(cover.peek()));
+  let applied = cover.peek();
   effect(() => {
     const c = cover.value;
-    if (!c.fold && refit) return refit();
+    // Only the fold flag changed (the panel renders again during a fold): the padding is already set,
+    // and a new easeTo would stop the move in progress.
+    if (c.top === applied.top && c.right === applied.right && c.bottom === applied.bottom && c.left === applied.left) return;
+    applied = c;
+    if (refit) return refit();
     const animate = c.fold && !wide.peek() && !reduceMotion.peek();
-    map.easeTo({ padding: padding(c), duration: animate ? FOLD_MS : 0 });
+    map.easeTo({ padding: padding(c), duration: animate ? FOLD_MS : 0, easing: foldEase });
   });
 
   let colors: Colors = readColors();
