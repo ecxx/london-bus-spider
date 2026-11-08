@@ -183,6 +183,7 @@ export class StationNames {
       if (this.markers.has(k)) continue;
       const [, lat, lon] = d.stations[k]!;
       const e = el("div", "st-label", el("span", "", stationName(d, k)));
+      e.setAttribute("aria-hidden", "true"); // the station list and the search of the panel have the same stations
       this.markers.set(k, new maplibregl.Marker({ element: e }).setLngLat([lon, lat]).addTo(this.map));
     }
   }

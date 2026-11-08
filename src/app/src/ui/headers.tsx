@@ -21,7 +21,7 @@ export function ViewHeader({ d, view }: { d: Core; view: View }) {
         <div class="head center">
           <StationRing text={String(n)} size="lg" />
           <div class="head-main">
-            <h1>{stationName(d, view.key)}</h1>
+            <h1 tabIndex={-1}>{stationName(d, view.key)}</h1>
           </div>
           <Close />
         </div>
@@ -35,7 +35,7 @@ export function ViewHeader({ d, view }: { d: Core; view: View }) {
         <div class="head">
           <Roundel text={r.text} stand={r.stand} size="lg" />
           <div class="head-main">
-            <h1>{stopName(d, view.key)}</h1>
+            <h1 tabIndex={-1}>{stopName(d, view.key)}</h1>
             <p class="one-line">
               {text && <span>{text} ·&nbsp;</span>}
               <a class="link" href={viewHash({ kind: "station", key: st })} title={stationName(d, st)}>
@@ -55,7 +55,7 @@ export function ViewHeader({ d, view }: { d: Core; view: View }) {
         <div class="head">
           <Badge line={r.line} size="lg" />
           <div class="head-main">
-            <h1>{h.title}</h1>
+            <h1 tabIndex={-1}>{h.title}</h1>
             <p>{h.sub}</p>
           </div>
           <Close />
@@ -66,7 +66,7 @@ export function ViewHeader({ d, view }: { d: Core; view: View }) {
       return (
         <div class="head center">
           <div class="head-main">
-            <h1>About</h1>
+            <h1 tabIndex={-1}>About</h1>
           </div>
           <Close />
         </div>

@@ -115,6 +115,17 @@ export function Panel() {
     if (contentRef.current) contentRef.current.inert = isFolded;
   }, [isFolded]);
 
+  // A view opened and the element with the focus went away: the focus goes to the heading of the new
+  // view, so that the next Tab key is in that view and a screen reader reads its name (prod_design 6).
+  const shownView = useRef(v);
+  useLayoutEffect(() => {
+    if (shownView.current === v) return;
+    shownView.current = v;
+    if (document.activeElement && document.activeElement !== document.body) return;
+    const heading = panelRef.current!.querySelector<HTMLElement>(isFolded ? ".peek h1" : ".scroll h1");
+    (heading ?? contentRef.current)?.focus({ preventScroll: true });
+  }, [v]);
+
   const fold = (on: boolean) => setFolded(on, setFolding);
   const label = isFolded ? "Show the list" : "Hide the list";
   const cls = ["panel", v.kind === "home" ? "is-home" : "", isFolded && !folding ? "is-folded" : "", isFolded && folding ? "is-folding" : ""];
@@ -201,7 +212,7 @@ export function Panel() {
       >
         {d && isFolded && !folding && <ViewHeader d={d} view={v} />}
       </div>
-      <div class="scroll" id="panel-content" ref={contentRef} onMouseOver={onRowOver} onMouseLeave={onRowLeave}>
+      <div class="scroll" id="panel-content" tabIndex={-1} ref={contentRef} onMouseOver={onRowOver} onMouseLeave={onRowLeave}>
         <div ref={innerRef}>
           {d ? (
             <ViewContent d={d} view={v} />

@@ -99,7 +99,7 @@ a { color: inherit; }
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 40px; height: 26px; padding: 0 7px;
   border-radius: 6px;
-  background: var(--red); color: #fff;
+  background: var(--badge-red); color: #fff;
   font-weight: 800; font-size: 14.5px; letter-spacing: -.01em;
   font-variant-numeric: tabular-nums;
   flex: none;
@@ -143,6 +143,8 @@ a { color: inherit; }
 }
 .row:hover, .row.is-hot, .row.is-active { background: var(--hover); }
 .row:focus-visible { outline: 2px solid var(--red); outline-offset: -2px; }
+/* The focus goes to these when a view opens. They are not controls: no ring. */
+h1:focus, .scroll:focus { outline: none; }
 .row-main { flex: 1; min-width: 0; }
 .row-title, .row-sub { display: block; }
 .row-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -257,7 +259,7 @@ a.tab:hover { color: var(--ink); }
 .chip:hover { background: var(--hover); }
 .chip:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
 .chip[aria-pressed="true"], .chip[aria-current="true"] { border-color: var(--ink); background: var(--ink); color: var(--panel); }
-.chip .n { font-weight: 500; opacity: .7; }
+.chip .n { font-weight: 500; opacity: .85; }
 .chip.stop { padding: 0 10px 0 3px; }
 .chip.stop .roundel { width: 24px; height: 24px; font-size: 10.5px; } /* app_design 3.4: stop chip */
 

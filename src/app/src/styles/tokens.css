@@ -2,12 +2,13 @@
 :root {
   --red: #DC241F;
   --red-ink: #B4170F;
+  --badge-red: #DC241F;
   --night: #1C2B64;
   --bg: #F3F2EF;
   --panel: #FFFFFF;
   --ink: #15171C;
   --ink-2: #555B67;
-  --ink-3: #8C919B;
+  --ink-3: #686D77;
   --rule: #E8E8EA;
   --hover: #F6F5F3;
   --behind: #A3A7AF;
@@ -22,8 +23,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --red: #F0453F; --red-ink: #FF7A73; --night: #8EA2F0;
-    --bg: #111215; --panel: #1A1B20; --ink: #F1F1F3; --ink-2: #A9ADB7; --ink-3: #737885;
+    --red: #F0453F; --red-ink: #FF7A73; --badge-red: #DC241F; --night: #8EA2F0;
+    --bg: #111215; --panel: #1A1B20; --ink: #F1F1F3; --ink-2: #A9ADB7; --ink-3: #878C99;
     --rule: #2B2D34; --hover: #23252B; --behind: #5E626C;
     --stop-fill: #1A1B20; --stop-ring: #A9ADB7;
     --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 30px rgba(0, 0, 0, .5);
@@ -32,8 +33,8 @@
 }
 
 :root[data-theme="dark"] {
-  --red: #F0453F; --red-ink: #FF7A73; --night: #8EA2F0;
-  --bg: #111215; --panel: #1A1B20; --ink: #F1F1F3; --ink-2: #A9ADB7; --ink-3: #737885;
+  --red: #F0453F; --red-ink: #FF7A73; --badge-red: #DC241F; --night: #8EA2F0;
+  --bg: #111215; --panel: #1A1B20; --ink: #F1F1F3; --ink-2: #A9ADB7; --ink-3: #878C99;
   --rule: #2B2D34; --hover: #23252B; --behind: #5E626C;
   --stop-fill: #1A1B20; --stop-ring: #A9ADB7;
   --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 30px rgba(0, 0, 0, .5);

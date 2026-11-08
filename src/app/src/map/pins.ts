@@ -34,6 +34,7 @@ export class Pins {
       const el = document.createElement("div");
       el.className = key === selected ? "pin sel" : "pin";
       el.dataset.stop = key;
+      el.setAttribute("aria-hidden", "true"); // the stop chips of the panel have the same stops
       const roundel = document.createElement("span");
       roundel.className = r.stand ? "roundel stand" : "roundel";
       roundel.textContent = r.text;
