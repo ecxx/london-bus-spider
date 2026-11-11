@@ -20,7 +20,7 @@ import type { AfterSection } from "./spider";
 const TERM_GAP = 2; // px kept between placed labels (app_design 6.4)
 const TERM_KEEP = 40; // px kept free of labels around each selected stop
 const LABEL_DY = 8; // px between the end and the bottom of its label (the .term-in CSS)
-const NAME_ZOOM = 17; // the station names start at this zoom (app_design 5.4)
+const NAME_ZOOM = 16; // the station names start at this zoom (app_design 5.4)
 
 type Band = 0 | 1 | 2; // the zoom bands of app_design 5.4: below 12, 12 to 14, from 14
 const bandOf = (z: number): Band => (z < 12 ? 0 : z < 14 ? 1 : 2);
@@ -159,7 +159,7 @@ export class EndLabels {
   }
 }
 
-// app_design 5.4: the station names, from zoom 17, for the stations in view that are not dimmed.
+// app_design 5.4: the station names, from zoom 16, for the stations in view that are not dimmed.
 export class StationNames {
   private markers = new globalThis.Map<StationKey, Marker>();
 

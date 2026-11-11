@@ -14,8 +14,8 @@ const DASH_ROUTE_OTHER = [2, 2.33]; // 6 px, 7 px at 3 px
 const DASH_ROUTE_SELECTED = [1.6, 1.6]; // 8 px, 8 px at 5 px
 const DIM = 0.12; // the opacity of the lines that are not highlighted (app_design 6.4)
 const SOLID = [1, 0];
-const STOP_ZOOM = 14; // the station dots start at this zoom (app_design 5.4)
-const DIM_ZOOM = 15; // the station dots that a spider graph does not serve start at this zoom
+const STOP_ZOOM = 13; // the station dots start at this zoom (app_design 5.4)
+const DIM_ZOOM = 14; // the station dots that a spider graph does not serve start at this zoom
 
 // The state of the view that the paint and the filters use.
 export interface LayerState {
@@ -38,18 +38,21 @@ function highlighted(h: Highlight): ExpressionSpecification {
 // app_design 5.4 and 5.5. The demo (Leaflet) draws the stroke on the radius; MapLibre draws it outside
 // the radius. Thus circle-radius is the radius of the table less half the stroke, and the dots have the
 // same size as in the demo.
-//   zoom 14 to 15: radius 3.5, stroke 1.5 (2.5 for a red ring). A dimmed dot is not shown.
-//   zoom 15 to 16: radius 3.5, stroke 1.5 (2.5).
+//   zoom 13 to 14: radius 3.5, stroke 1.5 (2.5 for a red ring). A dimmed dot is not shown.
+//   zoom 14 to 16: radius 3.5, stroke 1.5 (2.5).
 //   from zoom 16:  radius 6, stroke 2 (2.5).
+// Only the dimmed dots of a spider graph have less opacity. With no spider graph (the home view), all
+// the dots have full opacity.
 function stationDots(c: Colors, s: LayerState): LayerSpecification {
   const on: ExpressionSpecification | null = s.served ? ["in", ["get", "k"], ["literal", s.served]] : null;
   const pick = (red: number, other: number) => (on ? (["case", on, red, other] as ExpressionSpecification) : other);
+  const fade = (dim: number) => (on ? (["case", on, 1, dim] as ExpressionSpecification) : 1);
   const band = (r: number, w: number, hideDim: boolean) => ({
     radius: pick(r - 1.25, hideDim && on ? 0 : r - w / 2),
     width: pick(2.5, hideDim && on ? 0 : w),
   });
-  const z14 = band(3.5, 1.5, true);
-  const z15 = band(3.5, 1.5, false);
+  const z13 = band(3.5, 1.5, true);
+  const z14 = band(3.5, 1.5, false);
   const z16 = band(6, 2, false);
   const layer: LayerSpecification = {
     id: "station-dots",
@@ -57,12 +60,12 @@ function stationDots(c: Colors, s: LayerState): LayerSpecification {
     source: "stations",
     minzoom: STOP_ZOOM,
     paint: {
-      "circle-radius": ["step", ["zoom"], z14.radius, DIM_ZOOM, z15.radius, 16, z16.radius] as ExpressionSpecification,
-      "circle-stroke-width": ["step", ["zoom"], z14.width, DIM_ZOOM, z15.width, 16, z16.width] as ExpressionSpecification,
+      "circle-radius": ["step", ["zoom"], z13.radius, DIM_ZOOM, z14.radius, 16, z16.radius] as ExpressionSpecification,
+      "circle-stroke-width": ["step", ["zoom"], z13.width, DIM_ZOOM, z14.width, 16, z16.width] as ExpressionSpecification,
       "circle-color": c.stopFill,
-      "circle-opacity": pick(1, 0.5),
+      "circle-opacity": fade(0.5),
       "circle-stroke-color": on ? ["case", on, c.red, c.stopRing] : c.stopRing,
-      "circle-stroke-opacity": pick(1, 0.3),
+      "circle-stroke-opacity": fade(0.3),
     },
   };
   if (s.station) layer.filter = ["!=", ["get", "k"], s.station];
