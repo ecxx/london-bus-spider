@@ -25,8 +25,10 @@ function samplePoints(page: Page, n: number) {
       .filter((f) => f.properties!.part === "after")
       .map((f) => ({ line: f.properties!.line as string, pts: f.geometry.coordinates.map((c) => m.project(c as [number, number])) }));
     const panel = document.querySelector(".panel")!.getBoundingClientRect();
+    // A station dot (from STOP_ZOOM) is above the lines too: the hover shows the station, not the routes.
     const onMarker = (x: number, y: number) =>
-      [[0, 0], [-3, -3], [3, -3], [-3, 3], [3, 3]].some(([dx, dy]) => !!document.elementFromPoint(x + dx!, y + dy!)?.closest(".maplibregl-marker"));
+      [[0, 0], [-3, -3], [3, -3], [-3, 3], [3, 3]].some(([dx, dy]) => !!document.elementFromPoint(x + dx!, y + dy!)?.closest(".maplibregl-marker")) ||
+      m.queryRenderedFeatures([[x - 3, y - 3], [x + 3, y + 3]], { layers: ["station-dots"] }).length > 0;
     const dist = (pts: { x: number; y: number }[], x: number, y: number) => {
       let best = Infinity;
       for (let i = 1; i < pts.length; i++) {

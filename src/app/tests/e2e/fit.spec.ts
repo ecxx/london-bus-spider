@@ -80,10 +80,18 @@ test.describe("mute after a fit (prod_design 5.8)", () => {
 });
 
 test.describe("zoom speed (prod_design 5.8)", () => {
+  // The zoom change of the events. Wait for the move to start, then to end: while the data loads, the
+  // move can start more than 500 ms after the event (the 40 ms wheel timeout of MapLibre, then a frame).
   const zoomAfter = async (page: Page, send: () => Promise<void>) => {
     const z0 = (await camera(page)).zoom;
+    await page.evaluate(() => {
+      const w = window as { __moved?: boolean };
+      w.__moved = false;
+      window.__map!.once("movestart", () => (w.__moved = true));
+    });
     await send();
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => !!(window as { __moved?: boolean }).__moved && !window.__map!.isMoving(), null, { timeout: 10_000, polling: 50 });
+    await page.waitForTimeout(300); // a later move of the gesture, if any
     await page.waitForFunction(() => !window.__map!.isMoving());
     return (await camera(page)).zoom - z0;
   };

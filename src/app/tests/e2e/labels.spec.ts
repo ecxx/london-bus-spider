@@ -129,13 +129,13 @@ test.describe("end labels (app_design 6.4)", () => {
 });
 
 test.describe("station names (app_design 5.4)", () => {
-  test("from zoom 17, for the served stations in view; not for the selected station", async ({ page }) => {
+  test("from zoom 16, for the served stations in view; not for the selected station", async ({ page }) => {
     test.slow(); // three zooms, each with the basemap tiles (the names come from the rendered dots)
     await page.setViewportSize(WIDE);
     await open(page, `#/station/${ALDWYCH}`);
     await mapReady(page, true);
     await fitDone(page);
-    // A served station (a red ring) at zoom 15, then the zooms 16.9 and 17 at it.
+    // A served station (a red ring) at zoom 15, then the zooms 15.9 and 16 at it.
     await zoomTo(page, 15);
     const at = await page.evaluate(() => {
       const m = window.__map!;
@@ -143,11 +143,11 @@ test.describe("station names (app_design 5.4)", () => {
       const f = m.queryRenderedFeatures({ layers: ["station-dots"] }).find((f) => ring.includes(`"${f.properties.k}"`))!;
       return (f.geometry as GeoJSON.Point).coordinates as [number, number];
     });
-    for (const z of [16.9, 17]) {
+    for (const z of [15.9, 16]) {
       await page.evaluate(([c, z]) => window.__map!.jumpTo({ center: c, zoom: z }), [at, z] as const);
       await page.waitForFunction(() => window.__settled!(), null, { polling: 50 });
       await page.waitForTimeout(50);
-      if (z < 17) await expect(page.locator(".st-label")).toHaveCount(0);
+      if (z < 16) await expect(page.locator(".st-label")).toHaveCount(0);
     }
     const names = await page.locator(".st-label").allTextContents();
     expect(names.length).toBeGreaterThan(0);
