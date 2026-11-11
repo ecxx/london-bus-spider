@@ -1,5 +1,7 @@
 // The load of the export (prod_design 4.1, export_format 6.1).
 import { buildIndexes, type Indexes } from "./indexes";
+import { mark, sample, time } from "../perf";
+import type { LinesReply, LinesRequest } from "./linesWorker";
 import { decodePolyline } from "./polyline";
 import type { DecodedLine, Lines, Manifest, PatternKey, Patterns, Stations, Stops } from "./types";
 
@@ -41,9 +43,39 @@ export async function loadCore(base = DATA_URL, get: FetchJson = fetchJson): Pro
   return { manifest, stops, stations, patterns, ...buildIndexes(stops, patterns) };
 }
 
-// Step 4: the lines, decoded. The keys are the pattern keys, in the order of the file.
+// Step 4 on the current thread: the lines, decoded. The keys are the pattern keys, in the order of the
+// file. The unit tests use it. The client uses loadLinesInWorker.
 export async function loadLines(core: Core, base = DATA_URL, get: FetchJson = fetchJson): Promise<Map<PatternKey, DecodedLine>> {
   return decodeLines((await get(base + core.manifest.files.lines)) as Lines);
+}
+
+// Step 4 in a Web Worker (data/linesWorker.ts): the get, the parse and the decode. The main thread only
+// makes the map of the decoded lines.
+export function loadLinesInWorker(core: Core, base = DATA_URL): Promise<Map<PatternKey, DecodedLine>> {
+  return new Promise((ok, fail) => {
+    const w = new Worker(new URL("./linesWorker.ts", import.meta.url), { type: "module" });
+    w.onmessage = (e: MessageEvent<LinesReply>) => {
+      w.terminate();
+      const r = e.data;
+      if (!r.ok) return fail(new Error(r.error));
+      // prod_design 9, step 15: the times in the worker, and the work on the main thread.
+      sample("linesFetch", r.ms.fetch);
+      sample("decode", r.ms.decode);
+      const out = time("linesMain", () => {
+        const lines = new Map<PatternKey, DecodedLine>();
+        r.pids.forEach((pid, i) => lines.set(pid, { coords: r.coords[i]!, stopPoints: r.stopPoints[i]! }));
+        return lines;
+      });
+      mark("linesParsed");
+      ok(out);
+    };
+    w.onerror = (e) => {
+      w.terminate();
+      fail(new Error(e.message || "The lines worker stopped."));
+    };
+    const msg: LinesRequest = { url: new URL(base + core.manifest.files.lines, location.href).href };
+    w.postMessage(msg);
+  });
 }
 
 export function decodeLines(lines: Lines): Map<PatternKey, DecodedLine> {

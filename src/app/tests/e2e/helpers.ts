@@ -17,13 +17,14 @@ export const hash = (page: Page) => page.evaluate(() => location.hash);
 type Fc = { features: unknown[] };
 
 // Wait for the map, its style and (optional) the home lines. The client adds its layers with empty
-// sources at "style.load", and sets the data when it is loaded: wait for the data of the home source.
+// sources at "style.load", and sets the data when it is loaded. The home lines go to the source in groups
+// (prod_design 5.3): wait for the last group (the mark "homeSet" of src/perf.ts).
 export async function mapReady(page: Page, homeLines = false): Promise<void> {
   await page.waitForFunction(
     (home) => {
       const m = window.__map;
       if (!m || m.isStyleLoaded() === undefined) return false;
-      return !home || (!!m.getLayer("home-lines") && (m.getSource("home")!.serialize().data as Fc).features.length > 0);
+      return !home || (!!m.getLayer("home-lines") && window.__perf?.report().marks.homeSet !== undefined);
     },
     homeLines,
     { timeout: 30_000, polling: 100 },

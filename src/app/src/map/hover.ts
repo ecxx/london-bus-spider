@@ -10,6 +10,7 @@ import type { RouteContext } from "../model/route";
 import { stopsText } from "../model/stopCode";
 import { stationName, stopCode, stopName } from "../model/text";
 import { viewHash } from "../model/url";
+import { time } from "../perf";
 import { go } from "../state/router";
 import { cover, highlight } from "../state/signals";
 import { nameTip, RouteMenu, routesTip, Tooltip } from "./overlay";
@@ -52,7 +53,7 @@ export class MapHover {
       if (!this.frame) this.frame = requestAnimationFrame(() => this.update());
     });
     map.on("mouseout", () => this.end());
-    map.on("click", (e) => this.click(e));
+    map.on("click", (e) => this.measured(() => this.click(e)));
   }
 
   // The routes at a point of the map: step 1 finds the candidates in the tiles, step 2 keeps the
@@ -101,7 +102,18 @@ export class MapHover {
     highlight.value = h;
   }
 
+  // prod_design 9, step 15: the time of the hit test in each frame (and of each click), when a spider
+  // graph shows. The time includes the dots, the routes and the tooltip.
+  private measured(f: () => void): void {
+    if (this.src.sections()) time("hitTest", f);
+    else f();
+  }
+
   private update(): void {
+    this.measured(() => this.updateNow());
+  }
+
+  private updateNow(): void {
     this.frame = 0;
     const d = this.src.core();
     if (!this.pt || !d || this.onPin) return;

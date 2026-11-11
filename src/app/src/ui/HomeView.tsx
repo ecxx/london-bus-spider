@@ -7,6 +7,7 @@ import { compareLines } from "../model/order";
 import { stationList, windowRange, type ListItem, type StationList } from "../model/stationList";
 import { homeRouteRow, stationCodes, stationName, stationRing } from "../model/text";
 import { viewHash } from "../model/url";
+import { afterPaint, mark, now, PERF_ON, sample } from "../perf";
 import { homeScroll, homeTab, type HomeTab } from "../state/signals";
 import { Badge, ChevronRight, StationRing } from "./marks";
 import { ScrollContext } from "./scroll";
@@ -31,6 +32,11 @@ export function HomeView({ d }: { d: Core }) {
   const routes = useMemo(() => [...d.lines.values()].sort(compareLines), [d]);
   const stations = useMemo(() => stationList(d), [d]);
   useSaveScroll(tab);
+  // prod_design 9, step 15: the home lists are in the document, then painted.
+  useLayoutEffect(() => {
+    mark("lists");
+    afterPaint(() => mark("listsPaint"));
+  }, []);
   const tabButton = (t: HomeTab, label: string, n: number) => (
     <button
       class="tab"
@@ -94,6 +100,15 @@ function StationListView({ d, list }: { d: Core; list: StationList }) {
   const listRef = useRef<HTMLDivElement>(null);
   const cache = useMemo(() => new Map<ListItem, VNode>(), [list]);
   const [win, setWin] = useState({ lo: 0, to: 0, letter: "" });
+  // prod_design 9, step 15: one frame of the list, from the scroll frame to the new rows with their
+  // layout. The read of a row box forces the layout that the frame does after the script.
+  const frameT0 = useRef(0);
+  useLayoutEffect(() => {
+    if (!frameT0.current) return;
+    void listRef.current!.lastElementChild?.getBoundingClientRect();
+    sample("listFrame", now() - frameT0.current);
+    frameT0.current = 0;
+  }, [win]);
 
   useLayoutEffect(() => {
     const el = scroll.current!;
@@ -101,8 +116,13 @@ function StationListView({ d, list }: { d: Core; list: StationList }) {
     let frame = 0;
     const update = () => {
       frame = 0;
+      const t0 = now();
       const w = windowRange(list.items, el.scrollTop - listRef.current!.offsetTop, el.clientHeight, OVERSCAN);
-      setWin((p) => (p.lo === w.lo && p.to === w.to && p.letter === w.letter ? p : w));
+      setWin((p) => {
+        if (p.lo === w.lo && p.to === w.to && p.letter === w.letter) return p;
+        if (PERF_ON) frameT0.current = t0;
+        return w;
+      });
     };
     const queue = () => {
       if (!frame) frame = requestAnimationFrame(update);

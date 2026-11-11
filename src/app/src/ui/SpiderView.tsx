@@ -1,6 +1,8 @@
 // app_design 6.2, 6.3 and 6.4: the body of the station view and of the stop view, under the header.
 // The stop chips, the filter chips and the list of routes.
+import { useLayoutEffect } from "preact/hooks";
 import type { Core } from "../data/load";
+import { spanTouch } from "../perf";
 import type { StopKey } from "../data/types";
 import { highlights } from "../model/hover";
 import type { Filter } from "../model/spider";
@@ -50,6 +52,7 @@ function StopChips({ d, s }: { d: Core; s: Spider }) {
 // highlighted routes are marked, and the other rows are dimmed.
 export function SpiderView({ d, s }: { d: Core; s: Spider }) {
   const h = highlight.value;
+  useLayoutEffect(() => spanTouch("spider"), [s]); // prod_design 9, step 15
   return (
     <>
       <StopChips d={d} s={s} />

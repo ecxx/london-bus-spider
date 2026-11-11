@@ -1,6 +1,7 @@
 // app_design 4.3: the hash router.
 import { effect } from "@preact/signals";
 import { parseHash, resolveView, upView, viewHash, type View } from "../model/url";
+import { afterPaint, now, sample, spanStart } from "../perf";
 import { core, highlight, rowHover, view } from "./signals";
 
 // Open a view. replace: replace the history entry (D12), else add one.
@@ -41,6 +42,13 @@ function route(): void {
   // A new view: the row under the pointer and the highlighted routes are of the old view.
   highlight.value = null;
   rowHover.value = null;
+  // prod_design 9, step 15: the open of a spider graph, to the end of its work (the panel and the map
+  // sources), and to the next paint.
+  if (v.kind === "station" || v.kind === "stop") {
+    spanStart("spider", `${v.kind} ${v.key}`);
+    const t0 = now();
+    afterPaint(() => sample("spiderPaint", now() - t0));
+  }
   view.value = v;
 }
 

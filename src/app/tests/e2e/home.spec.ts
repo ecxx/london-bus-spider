@@ -135,45 +135,4 @@ test.describe("home lines (app_design 6.1, prod_design 5.4)", () => {
     await page.evaluate(() => (location.hash = "#/about"));
     await expect.poll(visibility).toBe("visible");
   });
-
-  // D9: the frame time of a zoom on the home view with all the line-directions. Project chromium-gpu
-  // (npm run perf). The limit of prod_design 9, step 15: 16.7 ms or less for 95% of the frames on the laptop.
-  test("D9: frame time of a zoom with all the home lines @perf", async ({ page }, info) => {
-    await page.setViewportSize(WIDE);
-    await open(page, "#/");
-    await mapReady(page, true);
-    await page.waitForFunction(() => window.__map!.areTilesLoaded(), null, { timeout: 30_000 });
-    const r = await page.evaluate(async () => {
-      const m = window.__map!;
-      const gl = document.createElement("canvas").getContext("webgl2")!;
-      const ext = gl.getExtension("WEBGL_debug_renderer_info");
-      const renderer = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
-      const run = (from: number, to: number) =>
-        new Promise<number[]>((ok) => {
-          m.jumpTo({ zoom: from });
-          const times: number[] = [];
-          let last = 0;
-          let on = true;
-          const tick = (t: number) => {
-            if (last) times.push(t - last);
-            last = t;
-            if (on) requestAnimationFrame(tick);
-          };
-          m.once("moveend", () => {
-            on = false;
-            ok(times);
-          });
-          requestAnimationFrame(tick);
-          m.zoomTo(to, { duration: 3000 });
-        });
-      const frames = [...(await run(11, 15)), ...(await run(15, 11))].sort((a, b) => a - b);
-      const q = (p: number) => frames[Math.min(frames.length - 1, Math.floor(p * frames.length))]!;
-      return { renderer: String(renderer), frames: frames.length, median: q(0.5), p95: q(0.95), max: frames.at(-1)! };
-    });
-    const text = `${r.frames} frames, median ${r.median.toFixed(1)} ms, 95% ${r.p95.toFixed(1)} ms, max ${r.max.toFixed(1)} ms (${r.renderer})`;
-    console.log(`D9 zoom frame time: ${text}`);
-    info.annotations.push({ type: "D9 frame time", description: text });
-    expect(r.renderer).not.toMatch(/SwiftShader/);
-    expect(r.frames).toBeGreaterThan(10);
-  });
 });

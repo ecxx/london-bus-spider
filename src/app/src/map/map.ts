@@ -7,6 +7,7 @@ import type { Bounds, LngLat } from "../model/geo";
 import { MAX_ZOOM, MIN_ZOOM } from "../params";
 import type { Core } from "../data/load";
 import type { PatternKey, StopKey } from "../data/types";
+import { mark, now, PERF_ON, sample, spanTouch, time } from "../perf";
 import { core, cover, highlight, lines, reduceMotion, rowHover, scheme, view, wide, type Cover } from "../state/signals";
 import { route } from "../state/route";
 import { spider } from "../state/spider";
@@ -39,8 +40,18 @@ const WHEEL_ZOOM_RATE = 1 / 82; // a wheel step of 100 px gives 0.625 zoom level
 const TRACKPAD_ZOOM_RATE = 1 / 87; // small px: 120 px for one zoom level. MapLibre has one rate for a trackpad scroll and a pinch.
 const PIN_PX = 20; // the diameter of a stop pin, and of the selected pin (app_design 3.4)
 const PIN_SEL_PX = 36;
+const HOME_CHUNK = 20; // the home lines that go to the map in one task (prod_design 5.3)
 
 const EMPTY: FeatureCollection = { type: "FeatureCollection", features: [] };
+
+// prod_design 9, step 15: the main-thread time of a setData. MapLibre copies the data for its worker in
+// a microtask after the call, point by point. Thus measure to the next task.
+function measureSetData(name: string, f: () => void): void {
+  if (!PERF_ON) return f();
+  const t0 = now();
+  f();
+  setTimeout(() => sample(name, now() - t0));
+}
 
 // MapLibre GL JS 6 needs WebGL 2.
 function hasWebGL2(): boolean {
@@ -100,7 +111,7 @@ export function startMap(container: HTMLElement): void {
     console.error(err);
     return noMap(container);
   }
-  if (import.meta.env.DEV) window.__map = map;
+  if (PERF_ON) window.__map = map;
 
   // prod_design 5.1: no rotation, no pitch.
   map.dragRotate.disable();
@@ -153,7 +164,7 @@ export function startMap(container: HTMLElement): void {
     fitPending = true;
     requestAnimationFrame(run);
   };
-  if (import.meta.env.DEV) window.__fitBusy = () => fitPending || refit !== null;
+  if (PERF_ON) window.__fitBusy = () => fitPending || refit !== null;
 
   // prod_design 5.7: the map padding is the area that the panel covers. Thus START is at the middle of
   // the free area. After a fold on a phone, the centre stays at the middle of the new free area.
@@ -203,13 +214,37 @@ export function startMap(container: HTMLElement): void {
     const d = core.peek();
     const l = lines.peek();
     if (d && !stationsSet) {
-      source("stations").setData(stationsSource(d));
+      measureSetData("stationsSet", () => source("stations").setData(stationsSource(d)));
       stationsSet = true;
     }
     if (d && l && !homeSet) {
-      source("home").setData(homeSource(d, l));
       homeSet = true;
+      void addHome(time("homeBuild", () => homeSource(d, l)).features);
     }
+  };
+  // prod_design 5.3: the home lines go to the source in groups of HOME_CHUNK, one group at a time.
+  // MapLibre copies the data for its worker on the main thread, point by point: one
+  // setData of all the lines stops the page for approximately 1 s on the reference phone. Each group
+  // waits for the one before it, because MapLibre joins the updates that wait into one copy. The layer
+  // shows after the last group: a visible layer loads its tiles again after each group.
+  let homeAdding = false;
+  const addHome = async (features: FeatureCollection["features"]) => {
+    let total = 0;
+    homeAdding = true;
+    setHomeVisibility();
+    for (let i = 0; i < features.length; i += HOME_CHUNK) {
+      await new Promise<void>((ok) => whenStyle(ok));
+      const t0 = now();
+      const done = source("home").updateData({ add: features.slice(i, i + HOME_CHUNK) });
+      await new Promise((ok) => setTimeout(ok));
+      sample("homeChunk", now() - t0); // prod_design 9, step 15
+      total += now() - t0;
+      await done; // the reply of the worker comes in a new task: the page can draw a frame before the next group
+    }
+    sample("homeSetData", total);
+    homeAdding = false;
+    setHomeVisibility();
+    mark("homeSet");
   };
   effect(() => {
     void lines.value;
@@ -220,7 +255,8 @@ export function startMap(container: HTMLElement): void {
   const setHomeVisibility = () => {
     if (!map.getLayer("home-lines")) return;
     const k = view.peek().kind;
-    map.setLayoutProperty("home-lines", "visibility", k === "home" || k === "about" ? "visible" : "none");
+    const show = !homeAdding && (k === "home" || k === "about");
+    map.setLayoutProperty("home-lines", "visibility", show ? "visible" : "none");
   };
   effect(() => {
     void view.value;
@@ -263,7 +299,7 @@ export function startMap(container: HTMLElement): void {
     placedZoom = map.getZoom();
     placeMarks();
   };
-  if (import.meta.env.DEV) window.__settled = () => !settleTimer && placedZoom === map.getZoom() && !map.isMoving() && map.loaded();
+  if (PERF_ON) window.__settled = () => !settleTimer && placedZoom === map.getZoom() && !map.isMoving() && map.loaded();
   map.on("movestart", () => clearTimeout(settleTimer));
   map.on("moveend", () => {
     clearTimeout(settleTimer);
@@ -291,6 +327,7 @@ export function startMap(container: HTMLElement): void {
       if (d && s && shown) endLabels.set(d, shown.after, s.selected.map((k) => at(d, k)), s.ctx);
       else endLabels.clear();
       settle();
+      spanTouch("spider");
     }
     applyLayers(map, colors, layerState());
     if (d && s && shown && fitted !== s) {
