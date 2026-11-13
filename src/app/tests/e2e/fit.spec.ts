@@ -6,6 +6,7 @@ import { PHONE, WIDE, afterFold, fitDone, mapReady, open, panelSettled } from ".
 const ALDWYCH = "490G00019703";
 const BRONDESBURY = "ICS1001038";
 const OXFORD_CIRCUS = "ICS1000173";
+const KILBURN = "ICS1000126"; // 212 m from Brondesbury
 
 const camera = (page: Page) =>
   page.evaluate(() => {
@@ -14,8 +15,8 @@ const camera = (page: Page) =>
     return { lng: c.lng, lat: c.lat, zoom: m.getZoom() };
   });
 
-// Move the map to Heathrow, far from Aldwych. Then the station view of Aldwych moves the map (app_design 5.7):
-// if the selected stops are in the free area, the view does not move the map.
+// Move the map to Heathrow, far from Aldwych. Then the move of the station view of Aldwych (app_design 5.7)
+// changes the camera.
 const away = (page: Page) => page.evaluate(() => window.__map!.jumpTo({ center: [-0.45, 51.47], zoom: 14 }));
 
 function expectSameCamera(a: Awaited<ReturnType<typeof camera>>, b: Awaited<ReturnType<typeof camera>>): void {
@@ -138,6 +139,40 @@ test.describe("zoom speed (prod_design 5.8)", () => {
     );
     expect(dz).toBeGreaterThan(0.85);
     expect(dz).toBeLessThan(1.15);
+  });
+});
+
+test.describe("the move of a station view or a stop view (app_design 5.7)", () => {
+  test("the same station does not move the map; a different station moves it to STOP_VIEW_ZOOM", async ({ page }) => {
+    await page.setViewportSize(WIDE);
+    await open(page, `#/station/${BRONDESBURY}`);
+    await mapReady(page, true);
+    await fitDone(page);
+    expect((await camera(page)).zoom).toBeCloseTo(14, 6);
+
+    // A different camera. A stop of the same station, and then the station again, do not move the map.
+    await page.evaluate(() => window.__map!.jumpTo({ center: [-0.199, 51.546], zoom: 13.3 }));
+    const before = await camera(page);
+    for (const url of ["#/stop/490001038N", `#/station/${BRONDESBURY}`]) {
+      await page.evaluate((u) => (location.hash = u), url);
+      await fitDone(page);
+      await page.waitForTimeout(300); // a move would start in this time
+      expectSameCamera(await camera(page), before);
+    }
+
+    // Kilburn is in the free area, but it is a different station: the map moves.
+    await page.evaluate((u) => (location.hash = u), `#/station/${KILBURN}`);
+    await page.waitForFunction(() => window.__map!.getZoom() > 13.9, null, { timeout: 10_000 });
+    await fitDone(page);
+    const after = await camera(page);
+    expect(after.zoom).toBeCloseTo(14, 6);
+    const panel = (await page.locator(".panel").boundingBox())!;
+    const pin = await page.locator(".pin").first().evaluate((e) => {
+      const b = e.getBoundingClientRect();
+      return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+    });
+    expect(Math.abs(pin.x - (panel.x + panel.width + WIDE.width) / 2)).toBeLessThan(80);
+    expect(Math.abs(pin.y - WIDE.height / 2)).toBeLessThan(80);
   });
 });
 

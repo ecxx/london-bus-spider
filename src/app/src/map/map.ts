@@ -2,11 +2,11 @@
 import { effect } from "@preact/signals";
 import type { FeatureCollection } from "geojson";
 import type { GeoJSONSource, LngLatLike, Map, PaddingOptions } from "maplibre-gl";
-import { centre, fit, inFreeArea, ROUTE_FIT_MIN_ZOOM, STOP_VIEW_ZOOM, type Fit, type Viewport } from "../model/fit";
+import { centre, fit, ROUTE_FIT_MIN_ZOOM, STOP_VIEW_ZOOM, type Fit, type Viewport } from "../model/fit";
 import type { LngLat } from "../model/geo";
 import { MAX_ZOOM, MIN_ZOOM } from "../params";
 import type { Core } from "../data/load";
-import type { PatternKey, StopKey } from "../data/types";
+import type { PatternKey, StationKey, StopKey } from "../data/types";
 import { mark, now, PERF_ON, sample, spanTouch, time } from "../perf";
 import { core, cover, highlight, lines, reduceMotion, rowHover, scheme, view, wide, type Cover } from "../state/signals";
 import { route } from "../state/route";
@@ -308,6 +308,7 @@ export function startMap(container: HTMLElement): void {
   });
   let shownFor: unknown = null;
   let fitted: unknown = null;
+  let movedFor: StationKey | null = null; // the station of the last move of a station view or a stop view
   let routeShown: RouteMap | null = null;
   const at = (d: Core, k: StopKey): LngLat => [d.stops[k]![3], d.stops[k]![2]];
   const syncView = () => {
@@ -331,12 +332,17 @@ export function startMap(container: HTMLElement): void {
       spanTouch("spider");
     }
     applyLayers(map, colors, layerState());
+    // app_design 5.7: a station view or a stop view of a different station puts the selected stops at the
+    // middle of the free area, at STOP_VIEW_ZOOM. A change between the station and its stops, or a filter
+    // change, does not move the map. A view that is not a station view or a stop view clears the station.
+    if (!s) movedFor = null;
     if (d && s && shown && fitted !== s) {
       fitted = s;
-      const focus = s.selected.map((k) => at(d, k));
-      // app_design 5.7: if the selected stops are all in the free area, do not move the map. If not,
-      // put their middle at the middle of the free area, at STOP_VIEW_ZOOM.
-      moveTo((v) => (inFreeArea(v, focus.map((p) => map.project(p))) ? null : centre(focus, STOP_VIEW_ZOOM)));
+      if (s.station !== movedFor) {
+        movedFor = s.station;
+        const focus = s.selected.map((k) => at(d, k));
+        moveTo(() => centre(focus, STOP_VIEW_ZOOM));
+      }
     }
     // app_design 5.7: a route view fits the selected pattern, with the stop or the stops of the station
     // that opened it as the focus.

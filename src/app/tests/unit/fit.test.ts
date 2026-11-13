@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { ROUTE_FIT_MIN_ZOOM, STOP_VIEW_ZOOM, centre, fit, inFreeArea, type Viewport } from "../../src/model/fit";
+import { ROUTE_FIT_MIN_ZOOM, STOP_VIEW_ZOOM, centre, fit, type Viewport } from "../../src/model/fit";
 import { emptyBounds, extend, type Bounds, type LngLat } from "../../src/model/geo";
 
 // An independent Web Mercator, 512 px tiles: world pixels at a zoom.
@@ -107,13 +107,6 @@ describe("fit (app_design 5.7)", () => {
 });
 
 describe("station view and stop view move (app_design 5.7)", () => {
-  test("in the free area: the edges count, the panel and the window edges do not", () => {
-    expect(inFreeArea(WIDE, [{ x: 412, y: 0 }, { x: 1200, y: 800 }, { x: 800, y: 400 }])).toBe(true);
-    expect(inFreeArea(WIDE, [{ x: 800, y: 400 }, { x: 411, y: 400 }])).toBe(false); // under the panel
-    expect(inFreeArea(WIDE, [{ x: 1201, y: 400 }])).toBe(false);
-    expect(inFreeArea(PHONE, [{ x: 195, y: 844 - 489.52 + 1 }])).toBe(false); // under the sheet
-  });
-
   test("the middle of the selected stops at the middle of the free area, at STOP_VIEW_ZOOM", () => {
     const a: LngLat = [-0.126, 51.507];
     const b: LngLat = [-0.123, 51.509];

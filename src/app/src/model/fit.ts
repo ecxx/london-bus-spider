@@ -79,13 +79,6 @@ export function fit(v: Viewport, lines: Bounds, focus: LngLat[], minZoom: number
 // The value in [lo, hi]. If lo > hi (the focus is larger than the area), the middle.
 const clamp = (v: number, lo: number, hi: number): number => (lo > hi ? (lo + hi) / 2 : Math.min(hi, Math.max(lo, v)));
 
-// app_design 5.7: true if all the points (window pixels) are in the free area. Then a station view or a
-// stop view does not move the map.
-export function inFreeArea(v: Viewport, points: { x: number; y: number }[]): boolean {
-  const { width: W, height: H, cover: c } = v;
-  return points.every(({ x, y }) => x >= c.left && x <= W - c.right && y >= c.top && y <= H - c.bottom);
-}
-
 // app_design 5.7: the move of a station view or a stop view. The middle of the selected stops goes to the
 // middle of the free area, at the given zoom. Give the centre to easeTo with the map padding.
 export function centre(focus: LngLat[], zoom: number): Fit | null {
