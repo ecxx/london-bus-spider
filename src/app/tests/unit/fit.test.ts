@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { FIT_MIN_ZOOM, ROUTE_FIT_MIN_ZOOM, fit, type Viewport } from "../../src/model/fit";
+import { ROUTE_FIT_MIN_ZOOM, STOP_VIEW_ZOOM, centre, fit, inFreeArea, type Viewport } from "../../src/model/fit";
 import { emptyBounds, extend, type Bounds, type LngLat } from "../../src/model/geo";
 
 // An independent Web Mercator, 512 px tiles: world pixels at a zoom.
@@ -46,7 +46,7 @@ describe("fit (app_design 5.7)", () => {
   });
 
   test("one point: the maximum zoom 16, the point at the middle of the area", () => {
-    const f = fit(WIDE, bounds(charingCross), [charingCross], FIT_MIN_ZOOM)!;
+    const f = fit(WIDE, bounds(charingCross), [charingCross], 13)!;
     expect(f.zoom).toBe(16);
     const [x, y] = screen(WIDE, f, charingCross);
     expect(x).toBeCloseTo(798, 6);
@@ -57,7 +57,7 @@ describe("fit (app_design 5.7)", () => {
     const west: LngLat = [-0.5, 51.5];
     const east: LngLat = [0.3, 51.5];
     const focus: LngLat = [-0.45, 51.5]; // far from the middle of the lines
-    const f = fit(WIDE, bounds(west, east), [focus], FIT_MIN_ZOOM)!;
+    const f = fit(WIDE, bounds(west, east), [focus], 13)!;
     expect(f.zoom).toBe(13);
     const [x, y] = screen(WIDE, f, focus);
     expect(x).toBeCloseTo(452, 6); // on the left edge of the area: the smallest move
@@ -72,7 +72,7 @@ describe("fit (app_design 5.7)", () => {
   test("the minimum zoom: 13 for a station or a stop, 10 for a route", () => {
     const wide = bounds([-0.6, 51.3], [0.3, 51.7]); // approximately zoom 9.1
     expect(fit(WIDE, wide, [], ROUTE_FIT_MIN_ZOOM)!.zoom).toBe(10);
-    expect(fit(WIDE, wide, [], FIT_MIN_ZOOM)!.zoom).toBe(13);
+    expect(fit(WIDE, wide, [], 13)!.zoom).toBe(13);
   });
 
   test("phone: the area is above the sheet, with no space for the zoom buttons", () => {
@@ -102,6 +102,30 @@ describe("fit (app_design 5.7)", () => {
   });
 
   test("no lines and no focus: no fit", () => {
-    expect(fit(WIDE, emptyBounds(), [], FIT_MIN_ZOOM)).toBe(null);
+    expect(fit(WIDE, emptyBounds(), [], 13)).toBe(null);
+  });
+});
+
+describe("station view and stop view move (app_design 5.7)", () => {
+  test("in the free area: the edges count, the panel and the window edges do not", () => {
+    expect(inFreeArea(WIDE, [{ x: 412, y: 0 }, { x: 1200, y: 800 }, { x: 800, y: 400 }])).toBe(true);
+    expect(inFreeArea(WIDE, [{ x: 800, y: 400 }, { x: 411, y: 400 }])).toBe(false); // under the panel
+    expect(inFreeArea(WIDE, [{ x: 1201, y: 400 }])).toBe(false);
+    expect(inFreeArea(PHONE, [{ x: 195, y: 844 - 489.52 + 1 }])).toBe(false); // under the sheet
+  });
+
+  test("the middle of the selected stops at the middle of the free area, at STOP_VIEW_ZOOM", () => {
+    const a: LngLat = [-0.126, 51.507];
+    const b: LngLat = [-0.123, 51.509];
+    const f = centre([a, b], STOP_VIEW_ZOOM)!;
+    expect(f.zoom).toBe(14);
+    const [ax, ay] = screen(WIDE, f, a);
+    const [bx, by] = screen(WIDE, f, b);
+    expect((ax + bx) / 2).toBeCloseTo((412 + 1200) / 2, 6);
+    expect((ay + by) / 2).toBeCloseTo(400, 6);
+  });
+
+  test("no selected stops: no move", () => {
+    expect(centre([], STOP_VIEW_ZOOM)).toBe(null);
   });
 });

@@ -2,8 +2,8 @@
 import { effect } from "@preact/signals";
 import type { FeatureCollection } from "geojson";
 import type { GeoJSONSource, LngLatLike, Map, PaddingOptions } from "maplibre-gl";
-import { fit, FIT_MIN_ZOOM, ROUTE_FIT_MIN_ZOOM } from "../model/fit";
-import type { Bounds, LngLat } from "../model/geo";
+import { centre, fit, inFreeArea, ROUTE_FIT_MIN_ZOOM, STOP_VIEW_ZOOM, type Fit, type Viewport } from "../model/fit";
+import type { LngLat } from "../model/geo";
 import { MAX_ZOOM, MIN_ZOOM } from "../params";
 import type { Core } from "../data/load";
 import type { PatternKey, StopKey } from "../data/types";
@@ -150,11 +150,11 @@ export function startMap(container: HTMLElement): void {
   let refit: (() => void) | null = null;
   let fitPending = false; // a fit waits for the next frame
   map.on("moveend", () => (refit = null));
-  const fitTo = (bounds: Bounds, focus: LngLat[], minZoom: number) => {
+  const moveTo = (calc: (v: Viewport) => Fit | null) => {
     const run = () => {
       fitPending = false;
       const c = cover.peek();
-      const f = fit({ width: container.clientWidth, height: container.clientHeight, cover: c, wide: wide.peek() }, bounds, focus, minZoom);
+      const f = calc({ width: container.clientWidth, height: container.clientHeight, cover: c, wide: wide.peek() });
       if (!f) return;
       map.stop();
       muteWheel();
@@ -332,13 +332,18 @@ export function startMap(container: HTMLElement): void {
     applyLayers(map, colors, layerState());
     if (d && s && shown && fitted !== s) {
       fitted = s;
-      fitTo(shown.bounds, s.selected.map((k) => at(d, k)), FIT_MIN_ZOOM);
+      const focus = s.selected.map((k) => at(d, k));
+      // app_design 5.7: if the selected stops are all in the free area, do not move the map. If not,
+      // put their middle at the middle of the free area, at STOP_VIEW_ZOOM.
+      moveTo((v) => (inFreeArea(v, focus.map((p) => map.project(p))) ? null : centre(focus, STOP_VIEW_ZOOM)));
     }
     // app_design 5.7: a route view fits the selected pattern, with the stop or the stops of the station
     // that opened it as the focus.
     if (d && r && routeShown && fitted !== r) {
       fitted = r;
-      fitTo(routeShown.bounds, [...r.here].map((k) => at(d, k)), ROUTE_FIT_MIN_ZOOM);
+      const bounds = routeShown.bounds;
+      const focus = [...r.here].map((k) => at(d, k));
+      moveTo((v) => fit(v, bounds, focus, ROUTE_FIT_MIN_ZOOM));
     }
   };
   effect(() => {
