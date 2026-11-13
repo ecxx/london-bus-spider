@@ -35,3 +35,7 @@ dist/
 .idea/
 *.swp
 .gstack/
+
+# Playwright output
+test-results/
+playwright-report/
