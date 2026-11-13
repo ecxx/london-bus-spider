@@ -323,8 +323,9 @@ export function startMap(container: HTMLElement): void {
       sections = shown && new globalThis.Map(shown.after.map((a) => [a.pid, a]));
       source("view").setData(shown?.data ?? routeShown?.data ?? EMPTY);
       source("route-stops").setData(routeShown?.stops ?? EMPTY);
-      // app_design 6.4: the end-label groups of the spider graph, then their placement at the zoom now.
-      if (d && s && shown) endLabels.set(d, shown.after, s.selected.map((k) => at(d, k)), s.ctx);
+      // app_design 6.4: the end-label groups of the stop view, then their placement at the zoom now.
+      // The station view has no end labels.
+      if (d && s && s.ctx.kind === "stop" && shown) endLabels.set(d, shown.after, s.selected.map((k) => at(d, k)), s.ctx);
       else endLabels.clear();
       settle();
       spanTouch("spider");

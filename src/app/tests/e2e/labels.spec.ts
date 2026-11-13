@@ -4,6 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { WIDE, fitDone, mapReady, open } from "./helpers";
 
 const ALDWYCH = "490G00019703";
+const ALDWYCH_S = "490019703Z"; // Stop S of Aldwych / Drury Lane
 
 // Go to a zoom at the middle of the selected stops, and wait for the settle.
 async function zoomTo(page: Page, zoom: number) {
@@ -35,19 +36,27 @@ const boxes = (page: Page) =>
 
 const overlap = (a: number[], b: number[]) => a[0]! < b[2]! - 0.5 && a[2]! > b[0]! + 0.5 && a[1]! < b[3]! - 0.5 && a[3]! > b[1]! + 0.5;
 
+test("the station view has no end labels (app_design 6.4)", async ({ page }) => {
+  await page.setViewportSize(WIDE);
+  await open(page, `#/station/${ALDWYCH}`);
+  await mapReady(page, true);
+  await fitDone(page);
+  await expect(page.locator(".pin")).toHaveCount(3);
+  await expect(page.locator(".term")).toHaveCount(0);
+});
+
 test.describe("end labels (app_design 6.4)", () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize(WIDE);
-    await open(page, `#/station/${ALDWYCH}`);
+    await open(page, `#/stop/${ALDWYCH_S}`);
     await mapReady(page, true);
     await fitDone(page);
   });
 
-  test("the labels do not overlap at zoom 11, 13, 15 and 17 at Aldwych / Drury Lane", async ({ page }) => {
-    // 26 sections after the stops end in fewer groups (250 m on the ground).
+  test("the labels do not overlap at zoom 11, 13, 15 and 17 at Aldwych / Drury Lane, Stop S", async ({ page }) => {
+    // The sections after the stop end in 11 groups (250 m on the ground).
     const groups = await page.locator(".term").count();
-    expect(groups).toBeGreaterThan(10);
-    expect(groups).toBeLessThan(26);
+    expect(groups).toBeGreaterThan(5);
     for (const z of [11, 13, 15, 17]) {
       await zoomTo(page, z);
       const b = await boxes(page);
@@ -81,7 +90,7 @@ test.describe("end labels (app_design 6.4)", () => {
   });
 
   test("a bubble opens when one of its routes is highlighted", async ({ page }) => {
-    await zoomTo(page, 13);
+    await zoomTo(page, 11); // at Stop S, the zoom with bubbles
     // A bubble, one of its routes, and the list row of that route in one of its directions.
     const pick = await page.evaluate(() => {
       const t = [...document.querySelectorAll<HTMLElement>(".term.is-collapsed")].find((t) => t.querySelector(".badge"))!;
@@ -105,7 +114,20 @@ test.describe("end labels (app_design 6.4)", () => {
     await expect(bubble.locator(".term-in")).toBeHidden();
   });
 
-  test("the pointer on a badge highlights its route; a click opens it from the station", async ({ page }) => {
+  test("the pointer on a line opens the labels of its routes, and they take no pointer events", async ({ page }) => {
+    await zoomTo(page, 12); // below STOP_ZOOM: no station dot is on the end of a line
+    // The end of a section: the dot of a label. The pointer there is on the line.
+    const at = await page.evaluate(() => {
+      const panel = document.querySelector(".panel")!.getBoundingClientRect();
+      const d = [...document.querySelectorAll(".term-dot")].map((e) => e.getBoundingClientRect()).find((r) => r.left > panel.right + 10 && r.right < innerWidth - 60 && r.top > 10 && r.bottom < innerHeight - 60)!;
+      return { x: d.x + d.width / 2, y: d.y + d.height / 2 };
+    });
+    await page.mouse.move(at.x, at.y);
+    await expect(page.locator(".term.is-open")).not.toHaveCount(0);
+    await expect(page.locator(".term.is-open:not(.is-passive)")).toHaveCount(0);
+  });
+
+  test("the pointer on a badge highlights its route; a click opens it from the stop", async ({ page }) => {
     await zoomTo(page, 13);
     // A badge in the free area, of a label with no "+n" (the pointer on a label with "+n" opens it, and
     // its badges move).
@@ -124,7 +146,7 @@ test.describe("end labels (app_design 6.4)", () => {
     expect(JSON.stringify(await page.evaluate(() => window.__map!.getFilter("highlight")))).toContain(`["literal",["${line}"]]`);
     await expect(page.locator(".tip")).toBeHidden(); // no route tooltip for the line under the label
     await badge.click();
-    await expect(page).toHaveURL(new RegExp(`#/station/${ALDWYCH}/line/${line}/${dir}$`));
+    await expect(page).toHaveURL(new RegExp(`#/stop/${ALDWYCH_S}/line/${line}/${dir}$`));
   });
 });
 

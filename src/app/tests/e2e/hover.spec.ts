@@ -15,7 +15,8 @@ const litLines = (page: Page) =>
 
 // Points beside the sections after the stop, with the lines 5 px or less from each point. The lines come
 // from the view source and map.project, not from the hit test of the client. A point where a line is
-// 4.5 to 5.5 px away is not used (the line width and the rounding of the tiles), and a point on or near
+// 4 to 6 px away is not used (the line width, the rounding of the tiles, and the source geometry
+// against the decoded points of the hit test), and a point on or near
 // a marker (a pin, an end label: they are above the lines) or under the panel is not used.
 function samplePoints(page: Page, n: number) {
   return page.evaluate((n) => {
@@ -53,7 +54,7 @@ function samplePoints(page: Page, n: number) {
       if (x < panel.right + 20 || x > innerWidth - 60 || y < 20 || y > innerHeight - 60) continue;
       if (onMarker(x, y)) continue;
       const ds = lines.map((q) => ({ line: q.line, d: dist(q.pts, x, y) }));
-      if (ds.some((q) => q.d > 4.5 && q.d < 5.5)) continue;
+      if (ds.some((q) => q.d > 4 && q.d < 6)) continue;
       out.push({ x, y, lines: [...new Set(ds.filter((q) => q.d <= 5).map((q) => q.line))].sort() });
     }
     return out;
@@ -102,10 +103,7 @@ test.describe("hover on the map (app_design 6.4, prod_design 5.5)", () => {
     expect(hot).toEqual(p!.lines);
     const opacity = JSON.stringify(await page.evaluate(() => window.__map!.getPaintProperty("spider-after", "line-opacity")));
     expect(opacity).toContain("0.12");
-    // The end labels of these routes open, and take no pointer events: the pointer stays on the line.
-    const open = await page.locator(".term.is-open").count();
-    expect(open).toBeGreaterThan(0);
-    await expect(page.locator(".term.is-open:not(.is-passive)")).toHaveCount(0);
+    // The end labels of a line hover are in labels.spec.ts (the station view has none).
     // Off the lines: no highlight, no tooltip.
     await page.mouse.move(1100, 60);
     const off = (await samplePoints(page, 60)).find((q) => q.lines.length === 0)!;
