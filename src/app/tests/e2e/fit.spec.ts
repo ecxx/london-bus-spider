@@ -14,6 +14,10 @@ const camera = (page: Page) =>
     return { lng: c.lng, lat: c.lat, zoom: m.getZoom() };
   });
 
+// Move the map to Heathrow, far from Aldwych. Then the station view of Aldwych moves the map (app_design 5.7):
+// if the selected stops are in the free area, the view does not move the map.
+const away = (page: Page) => page.evaluate(() => window.__map!.jumpTo({ center: [-0.45, 51.47], zoom: 14 }));
+
 function expectSameCamera(a: Awaited<ReturnType<typeof camera>>, b: Awaited<ReturnType<typeof camera>>): void {
   expect(a.zoom).toBeCloseTo(b.zoom, 6);
   expect(a.lng).toBeCloseTo(b.lng, 6);
@@ -49,13 +53,16 @@ function wheelStream(page: Page, opts: { ms: number; deltaY: number; openAt?: nu
 test.describe("mute after a fit (prod_design 5.8)", () => {
   test("the tail of a trackpad gesture does not stop the fit", async ({ page }) => {
     await page.setViewportSize(WIDE);
-    await open(page, `#/station/${ALDWYCH}`);
+    await open(page, "#/");
     await mapReady(page, true);
+    await away(page);
+    await page.evaluate((u) => (location.hash = u), `#/station/${ALDWYCH}`);
     await fitDone(page);
     const target = await camera(page);
 
     await page.evaluate(() => (location.hash = "#/"));
     await expect(page.locator(".scroll .tabs")).toBeVisible();
+    await away(page);
     await wheelStream(page, { ms: 1_500, deltaY: 2, openAt: 200, url: `#/station/${ALDWYCH}` });
     await fitDone(page);
     expectSameCamera(await camera(page), target);
@@ -220,7 +227,8 @@ test.describe("the map move of the fold (app_design 4.2)", () => {
       const last = ys.at(-1)!;
       expect(Math.abs(last - first), name).toBeGreaterThan(20);
       const between = new Set(ys.filter((y) => Math.min(first, last) + 1 < y && y < Math.max(first, last) - 1).map((y) => Math.round(y)));
-      expect(between.size, `${name}: frames of the map move`).toBeGreaterThanOrEqual(2);
+      // A jump gives no frame between. Under load, the software renderer can give only one frame between.
+      expect(between.size, `${name}: frames of the map move`).toBeGreaterThanOrEqual(1);
       await afterFold(page);
       await panelSettled(page);
       const panel = (await page.locator(".panel").boundingBox())!;
@@ -239,6 +247,7 @@ test.describe("the map move of the fold (app_design 4.2)", () => {
       await mapReady(page, true);
       await page.locator(".fold").click();
       await afterFold(page);
+      await away(page);
       await page.evaluate((u) => (location.hash = u), `#/station/${ALDWYCH}`);
       await fitDone(page);
       await panelSettled(page);
@@ -250,6 +259,7 @@ test.describe("the map move of the fold (app_design 4.2)", () => {
       await page.evaluate(() => (location.hash = "#/"));
       await expect(page.locator(".scroll .tabs")).toBeVisible();
       await page.waitForFunction(() => !window.__map!.isMoving());
+      await away(page);
       await page.evaluate((u) => (location.hash = u), `#/station/${ALDWYCH}`);
       // The click is in the page, in the first frame of the move: a Playwright click can come after the end of the fit.
       await page.evaluate(

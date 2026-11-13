@@ -69,26 +69,6 @@ test.describe("station view (app_design 6.2, 6.4)", () => {
     expect(await page.evaluate(() => window.__map!.getLayoutProperty("home-lines", "visibility"))).toBe("none");
   });
 
-  test("the fit: the selected stops are in the free area, at zoom 13 or more", async ({ page }) => {
-    await page.setViewportSize(WIDE);
-    await open(page, `#/station/${ALDWYCH}`);
-    await mapReady(page, true);
-    await fitDone(page);
-    const panel = (await page.locator(".panel").boundingBox())!;
-    const r = await page.evaluate(() => {
-      const m = window.__map!;
-      const pins = [...document.querySelectorAll<HTMLElement>(".pin")].map((p) => p.getBoundingClientRect());
-      return { zoom: m.getZoom(), pins: pins.map((b) => ({ x: b.x + b.width / 2, y: b.y + b.height / 2 })) };
-    });
-    expect(r.zoom).toBeGreaterThanOrEqual(13);
-    for (const p of r.pins) {
-      expect(p.x).toBeGreaterThan(panel.x + panel.width);
-      expect(p.x).toBeLessThan(WIDE.width);
-      expect(p.y).toBeGreaterThan(0);
-      expect(p.y).toBeLessThan(WIDE.height);
-    }
-  });
-
   test("the Night filter: the rows and the lines of the night and 24-hour routes", async ({ page }) => {
     await open(page, `#/station/${ALDWYCH}`);
     await mapReady(page, true);

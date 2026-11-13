@@ -47,8 +47,8 @@ test.describe("each URL of app_design 4.3 opens its view", () => {
     await open(page, "#/about");
     await expect(h1(page)).toHaveText("About");
     const about = page.locator(".about");
-    await expect(about).toContainText("TangledBuses shows the London bus routes that go through a stop or a station.");
-    await expect(about).toContainText("TangledBuses is not an official TfL product. TfL does not endorse it.");
+    await expect(about).toContainText("Explore route patterns and stop passing routes for TfL services.");
+    await expect(about).toContainText("TangledBuses is not a TfL-endorsed product.");
     await expect(about).toContainText("Powered by TfL Open Data");
     await expect(about.getByRole("link", { name: "TfL Transport Data Service terms" })).toHaveAttribute(
       "href",
