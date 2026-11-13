@@ -70,7 +70,8 @@ test.describe("axe scan", () => {
       await open(page, `#/station/${ALDWYCH}`);
       await mapReady(page, true);
       await fitDone(page);
-      // A point on the lines with two or more routes, in the free area, with no marker above the canvas.
+      // A point on the lines with two or more routes, in the free area, with no marker above the canvas and
+      // no station dot near it.
       const at = await page.evaluate(() => {
         const m = window.__map!;
         const canvas = m.getCanvas();
@@ -81,6 +82,8 @@ test.describe("axe scan", () => {
             const p = m.project(c as [number, number]);
             if (p.x < 450 || p.x > innerWidth - 20 || p.y < 20 || p.y > innerHeight - 20) continue;
             if (document.elementFromPoint(p.x, p.y) !== canvas) continue;
+            // A click on a station dot opens the station, not the route menu.
+            if (m.queryRenderedFeatures([[p.x - 8, p.y - 8], [p.x + 8, p.y + 8]], { layers: ["station-dots"] }).length) continue;
             const hits = m.queryRenderedFeatures([[p.x - 3, p.y - 3], [p.x + 3, p.y + 3]], { layers: ["spider-after"] });
             if (new Set(hits.map((h) => h.properties.line)).size >= 2) return { x: p.x, y: p.y };
           }
