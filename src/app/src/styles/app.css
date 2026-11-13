@@ -1,0 +1,437 @@
+/* The layout of app_design 4 and the parts of app_design 3. The values come from design/index.html. */
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.4 "Hanken Grotesk", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+button { font: inherit; color: inherit; }
+a { color: inherit; }
+
+/* ---------- Map ---------- */
+#map { position: fixed; inset: 0; background: var(--bg); }
+.no-map {
+  position: absolute; top: 0; right: 0; bottom: var(--cover-bottom, 0px); left: var(--cover-left, 0px);
+  display: grid; place-items: center; padding: 24px; text-align: center; color: var(--ink-2);
+}
+
+/* ---------- Panel (app_design 4.1) ---------- */
+.panel {
+  position: fixed; z-index: 10;
+  top: 16px; left: 16px;
+  width: 380px; height: calc(100% - 32px);
+  display: flex; flex-direction: column;
+  background: var(--panel);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: height var(--fold-ms) var(--fold-ease);
+}
+@media (prefers-reduced-motion: reduce) { .panel { transition: none; } }
+.top { position: relative; flex: none; border-top: 5px solid var(--red); }
+.brand { display: flex; align-items: center; gap: 10px; padding: 14px 56px 12px 16px; }
+.mark {
+  width: 34px; height: 34px; border-radius: 9px;
+  display: grid; place-items: center; flex: none;
+  background: var(--red); overflow: hidden;
+}
+.mark img { display: block; width: 100%; height: 100%; }
+.mark:focus-visible, .brand-name:focus-visible { outline: 2px solid var(--red); outline-offset: 3px; }
+.brand-name { display: block; width: max-content; font-weight: 800; font-size: 17px; letter-spacing: -.01em; line-height: 1.1; text-decoration: none; }
+.brand-sub { font-size: 12.5px; color: var(--ink-2); }
+.brand-sub a { color: var(--red-ink); font-weight: 600; text-decoration: none; }
+.brand-sub a:hover { text-decoration: underline; }
+
+.fold {
+  position: absolute; top: 15px; right: 12px;
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 0; background: var(--hover); color: var(--ink-2);
+  display: grid; place-items: center; cursor: pointer;
+}
+.fold:hover { color: var(--ink); }
+.fold:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+.fold svg { width: 16px; height: 16px; transition: rotate var(--fold-ms) var(--fold-ease); }
+.panel.is-folded .fold svg, .panel.is-folding .fold svg { rotate: 180deg; }
+@media (prefers-reduced-motion: reduce) { .fold svg { transition: none; } }
+
+.search { position: relative; margin: 0 12px 10px; }
+.search svg { position: absolute; left: 12px; top: 50%; translate: 0 -50%; width: 18px; height: 18px; color: var(--ink-3); pointer-events: none; }
+.search input {
+  width: 100%; height: 44px;
+  padding: 0 40px 0 38px;
+  border: 1.5px solid var(--rule); border-radius: 10px;
+  background: var(--hover); color: var(--ink);
+  font: inherit; font-size: 15px;
+  outline: none;
+  transition: border-color .15s, background .15s;
+}
+.search input::placeholder { color: var(--ink-3); }
+.search input:focus { border-color: var(--red); background: var(--panel); }
+.search input::-webkit-search-cancel-button { display: none; }
+.search kbd {
+  position: absolute; right: 10px; top: 50%; translate: 0 -50%;
+  font: 600 12px/1 "Hanken Grotesk", sans-serif; color: var(--ink-3);
+  border: 1px solid var(--rule); border-radius: 5px; padding: 4px 6px;
+}
+.search input:focus + kbd, .search input:not(:placeholder-shown) + kbd { display: none; }
+
+.results { flex: none; border-top: 1px solid var(--rule); max-height: 60vh; overflow-y: auto; }
+.results:empty { display: none; }
+.results .row.is-active { background: var(--hover); box-shadow: inset 3px 0 0 var(--red); }
+.results mark { background: none; color: var(--red-ink); font-weight: 700; }
+
+/* The copy of the header in the folded panel (app_design 4.2). */
+.peek { flex: none; border-top: 1px solid var(--rule); cursor: pointer; }
+.peek:empty { display: none; }
+
+.scroll { position: relative; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; border-top: 1px solid var(--rule); }
+/* Folded: the content keeps its scroll position, with no height. While the panel folds, the bottom edge cuts it. */
+.panel.is-folded .scroll { flex: none; height: 0; border-top: 0; visibility: hidden; }
+
+.loading, .empty { padding: 24px 16px; color: var(--ink-2); text-align: center; }
+
+/* ---------- Badges, roundels, rings (app_design 3.3, 3.4) ---------- */
+.badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 40px; height: 26px; padding: 0 7px;
+  border-radius: 6px;
+  background: var(--badge-red); color: #fff;
+  font-weight: 800; font-size: 14.5px; letter-spacing: -.01em;
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+.badge.night { background: var(--night); color: var(--panel); }
+.badge.limited { background: transparent; color: var(--red); box-shadow: inset 0 0 0 2px var(--red); }
+.badge.lg { min-width: 56px; height: 38px; font-size: 21px; border-radius: 8px; }
+.badge.sm { min-width: 32px; height: 20px; font-size: 12px; padding: 0 5px; border-radius: 4px; }
+.badge.xs { min-width: 26px; height: 16px; font-size: 10.5px; padding: 0 4px; border-radius: 3px; }
+
+.roundel {
+  display: inline-grid; place-items: center;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--red); color: #fff;
+  font-weight: 800; font-size: 11px; letter-spacing: -.02em;
+  flex: none;
+}
+.roundel.lg { width: 40px; height: 40px; font-size: 15px; }
+.roundel.stand { background: var(--ink-2); color: var(--panel); }
+
+.st-icon {
+  display: inline-grid; place-items: center;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--panel); color: var(--ink);
+  box-shadow: inset 0 0 0 3.5px var(--red);
+  font-weight: 800; font-size: 11.5px;
+  flex: none;
+}
+.st-icon.lg { width: 40px; height: 40px; font-size: 15px; box-shadow: inset 0 0 0 5px var(--red); }
+.st-icon.stand { box-shadow: inset 0 0 0 3.5px var(--ink-2); }
+.st-icon.long { font-size: 9px; letter-spacing: -.03em; }
+
+/* ---------- Rows ---------- */
+.list { list-style: none; margin: 0; padding: 4px 0 12px; }
+.row {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; padding: 10px 16px;
+  border: 0; background: none; text-align: left; cursor: pointer;
+  color: inherit; text-decoration: none;
+  transition: background .1s, opacity .15s;
+}
+.row:hover, .row.is-hot, .row.is-active { background: var(--hover); }
+.row:focus-visible { outline: 2px solid var(--red); outline-offset: -2px; }
+/* The focus goes to these when a view opens. They are not controls: no ring. */
+h1:focus, .scroll:focus { outline: none; }
+.row-main { flex: 1; min-width: 0; }
+.row-title, .row-sub { display: block; }
+.row-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row-title .to { font-weight: 500; color: var(--ink-3); margin-right: 3px; }
+.row-sub { font-size: 13px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .chev { color: var(--ink-3); flex: none; width: 16px; height: 16px; }
+.ind { font-size: 12px; font-weight: 700; color: var(--ink-3); margin-left: 2px; }
+
+/* ---------- Header of a view ---------- */
+.head { display: flex; gap: 12px; align-items: flex-start; padding: 16px 16px 12px; }
+.head.center { align-items: center; }
+.head-main { flex: 1; min-width: 0; }
+.head h1 { font-size: 20px; line-height: 1.2; margin: 1px 0 3px; font-weight: 800; letter-spacing: -.015em; }
+.head.center h1 { margin: 0; }
+.head p { margin: 0; color: var(--ink-2); font-size: 14px; }
+.link { color: var(--red-ink); font-weight: 600; text-decoration: none; cursor: pointer; }
+.link:hover { text-decoration: underline; }
+/* One line: a long station name is cut with "…", and its full name is the tooltip. */
+.head p.one-line { display: flex; min-width: 0; white-space: nowrap; }
+.head p.one-line > span { flex: none; }
+.head p.one-line .link { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.close {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 0; background: var(--hover); color: var(--ink-2);
+  display: grid; place-items: center; cursor: pointer; flex: none;
+}
+.close:hover { color: var(--ink); }
+.close:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+.close svg { width: 16px; height: 16px; }
+
+/* ---------- Tabs ---------- */
+.home-tabs { padding: 12px 16px 8px; }
+.tabs { display: flex; gap: 4px; padding: 3px; background: var(--hover); border-radius: 10px; }
+.tab {
+  flex: 1; min-width: 0; height: 36px; border: 0; border-radius: 8px;
+  background: none; cursor: pointer;
+  font-weight: 600; font-size: 13.5px; color: var(--ink-2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 10px;
+}
+.tab[aria-selected="true"] { background: var(--panel); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+.tab:focus-visible { outline: 2px solid var(--red); outline-offset: -2px; }
+.muted { color: var(--ink-2); }
+.tab .muted { font-weight: 500; }
+
+/* ---------- Route view (app_design 6.5) ---------- */
+/* The direction tabs and the variants are links: the selected one has aria-current. */
+a.tab { display: block; line-height: 36px; text-align: center; text-decoration: none; }
+a.tab:hover { color: var(--ink); }
+.tab[aria-current="true"] { background: var(--panel); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+.variants { display: flex; flex-direction: column; gap: 2px; padding: 3px; background: var(--hover); border-radius: 10px; }
+.variant {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+  width: 100%; min-width: 0; padding: 7px 10px; border-radius: 8px;
+  color: inherit; text-decoration: none; cursor: pointer;
+}
+.variant:hover { background: color-mix(in srgb, var(--panel) 50%, transparent); }
+.variant:focus-visible { outline: 2px solid var(--red); outline-offset: -2px; }
+.variant[aria-current="true"] { background: var(--panel); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+.variant .v-title { display: flex; align-items: center; font-weight: 700; font-size: 13.5px; }
+.variant .v-sub { max-width: 100%; font-size: 12.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tag {
+  display: inline-flex; align-items: center; height: 18px; padding: 0 6px; margin-left: 4px; border-radius: 4px;
+  box-shadow: inset 0 0 0 1.5px currentColor; font-size: 11px; font-weight: 700; color: var(--red-ink);
+}
+
+/* The stop list: a rail in the line colour, a dot for each stop. */
+.tl { list-style: none; margin: 0; padding: 4px 0 16px; --c: var(--red); }
+.tl.night { --c: var(--night); }
+.tl li { position: relative; }
+.tl .row { padding-left: 46px; min-height: 44px; }
+.tl li::before { content: ""; position: absolute; left: 26px; top: 0; bottom: 0; width: 4px; background: var(--c); pointer-events: none; }
+.tl.limited li::before { background: repeating-linear-gradient(to bottom, var(--c) 0 6px, transparent 6px 11px); }
+.tl li:first-child::before { top: 50%; }
+.tl li:last-child::before { bottom: 50%; }
+.tl li::after {
+  content: ""; position: absolute; left: 21px; top: 50%; translate: 0 -50%;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--panel); box-shadow: inset 0 0 0 3px var(--c);
+  pointer-events: none;
+}
+.tl li.end::after { width: 18px; height: 18px; left: 19px; background: var(--c); box-shadow: inset 0 0 0 4px var(--c), inset 0 0 0 7px var(--panel); }
+.tl li.here .row-title { color: var(--red-ink); font-weight: 800; }
+.tl li.here::after { background: var(--red); box-shadow: inset 0 0 0 3px var(--red), 0 0 0 4px color-mix(in srgb, var(--red) 25%, transparent); }
+.tl li.near .row-title { color: var(--red-ink); }
+.tl .ind { margin-left: 6px; }
+
+/* ---------- Station list: only the rows in view are in the DOM (app_design 7) ---------- */
+.vlist { position: relative; contain: strict; }
+.vitem { position: absolute; left: 0; right: 0; contain: strict; }
+.vitem.row { height: 48px; }
+.vhead, .vstick {
+  height: 30px; padding: 0 16px;
+  display: flex; align-items: center;
+  font-size: 12px; font-weight: 800; letter-spacing: .06em; color: var(--ink-3);
+  background: var(--panel); border-bottom: 1px solid var(--rule);
+}
+.vstick { position: sticky; top: 0; z-index: 2; margin-bottom: -30px; pointer-events: none; }
+/* A row that gets the focus or scrolls into view stays below the letter header. */
+.scroll:has(.vstick) { scroll-padding-top: 30px; }
+.vstick:empty { visibility: hidden; }
+
+/* ---------- Toolbar and chips (app_design 6.2, 6.3) ---------- */
+.toolbar { padding: 0 16px 12px; display: flex; flex-direction: column; gap: 10px; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 32px; padding: 0 12px;
+  border: 1.5px solid var(--rule); border-radius: 999px;
+  background: var(--panel); cursor: pointer;
+  font-weight: 600; font-size: 13.5px; color: var(--ink-2); text-decoration: none;
+}
+.chip:hover { background: var(--hover); }
+.chip:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+.chip[aria-pressed="true"], .chip[aria-current="true"] { border-color: var(--ink); background: var(--ink); color: var(--panel); }
+.chip .n { font-weight: 500; opacity: .85; }
+.chip.stop { padding: 0 10px 0 3px; }
+.chip.stop .roundel { width: 24px; height: 24px; font-size: 10.5px; } /* app_design 3.4: stop chip */
+
+/* ---------- Map marks (prod_design 5.6). z-index from the bottom: station names, end labels, pins, the selected pin. ---------- */
+/* An end label (app_design 6.4): a dot at the end of the line, the label above it, or a bubble. The
+   marker element has no size: its point is the end. */
+.term { width: 0; height: 0; z-index: 1; }
+.term.is-dim { z-index: 0; }
+.term:hover, .term.is-open { z-index: 2; }
+.term.is-passive { pointer-events: none; } /* opened by the hover on a map line (map/endLabels.ts) */
+.term-dot {
+  position: absolute; left: 0; top: 0; translate: -50% -50%;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--stop-fill); border: 2px solid var(--red); pointer-events: none;
+}
+.term-dot.night { border-color: var(--night); }
+.term.xs .term-dot { width: 8px; height: 8px; }
+.term-in {
+  position: absolute; left: 0; top: 0;
+  translate: -50% calc(-100% - 8px); /* LABEL_DY in map/endLabels.ts */
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 3px;
+  width: max-content; max-width: 150px;
+  padding: 4px; border-radius: 8px;
+  background: var(--panel); box-shadow: 0 1px 2px rgba(0, 0, 0, .15), 0 4px 12px rgba(0, 0, 0, .15);
+}
+.term-in::after {
+  content: ""; position: absolute; left: 50%; bottom: -5px; translate: -50% 0; rotate: 45deg;
+  width: 10px; height: 10px; background: var(--panel); border-radius: 0 0 2px 0;
+}
+.term.xs .term-in { padding: 3px; gap: 2px; border-radius: 6px; }
+.term .badge { position: relative; z-index: 1; cursor: pointer; transition: opacity .15s; }
+.term .badge.is-dim { opacity: .2; }
+/* app_design 5.4: a label shows its first badges and "+n". Hover, or a highlighted route, opens it. */
+.term .more { display: none; }
+.term:hover .more, .term.is-open .more { display: contents; }
+.term:hover .count, .term.is-open .count { display: none; }
+.term .count {
+  position: relative; z-index: 1;
+  display: inline-flex; align-items: center; height: 20px; padding: 0 5px; border-radius: 4px;
+  background: var(--hover); color: var(--ink-2); font-size: 11.5px; font-weight: 800; cursor: default;
+}
+.term .count.xs { height: 16px; font-size: 10px; padding: 0 4px; border-radius: 3px; }
+/* A bubble: a label that overlaps a placed mark. The number of its routes, at its end. */
+.term-mini {
+  display: none; position: absolute; left: 0; top: 0; translate: -50% calc(-100% - 6px);
+  min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; place-items: center;
+  background: var(--panel); color: var(--red-ink); box-shadow: inset 0 0 0 2px var(--red), 0 1px 3px rgba(0, 0, 0, .25);
+  font-size: 10.5px; font-weight: 800; cursor: default;
+}
+.term-mini.night { color: var(--night); box-shadow: inset 0 0 0 2px var(--night), 0 1px 3px rgba(0, 0, 0, .25); }
+.term.is-collapsed .term-in { display: none; }
+.term.is-collapsed .term-mini { display: grid; }
+.term.is-collapsed:hover .term-in, .term.is-collapsed.is-open .term-in { display: flex; }
+.term.is-collapsed:hover .term-mini, .term.is-collapsed.is-open .term-mini { display: none; }
+
+/* A station name (app_design 5.4), at the right of its dot. */
+.st-label { width: 0; height: 0; z-index: 0; pointer-events: none; }
+.st-label span {
+  position: absolute; left: 11px; top: 0; translate: 0 -50%;
+  white-space: nowrap; font-size: 12px; font-weight: 700; color: var(--ink);
+  text-shadow: 0 0 3px var(--panel), 0 0 3px var(--panel), 0 0 2px var(--panel);
+}
+
+.pin { z-index: 3; cursor: pointer; }
+.pin .roundel {
+  width: 20px; height: 20px; font-size: 9px;
+  box-shadow: 0 0 0 2px var(--stop-fill), 0 1px 3px rgba(0, 0, 0, .3);
+}
+.pin.sel { z-index: 4; }
+.pin.sel .roundel {
+  position: relative; width: 36px; height: 36px; font-size: 13px;
+  box-shadow: 0 0 0 3px var(--stop-fill), 0 0 0 6px color-mix(in srgb, var(--red) 35%, transparent), 0 2px 8px rgba(0, 0, 0, .35);
+}
+.pin.sel .roundel::after {
+  content: ""; position: absolute; inset: -3px; border-radius: 50%;
+  border: 3px solid var(--red); animation: pulse 2s ease-out infinite;
+}
+@keyframes pulse { from { opacity: .7; scale: 1; } to { opacity: 0; scale: 2.2; } }
+@media (prefers-reduced-motion: reduce) { .pin.sel .roundel::after { animation: none; display: none; } }
+
+/* app_design 6.4: while routes are highlighted, the other rows are dimmed. */
+.list.has-hot .row:not(.is-hot) { opacity: .45; }
+
+/* ---------- Tooltips and the route menu (prod_design 5.5): above the map and the markers, below the panel ---------- */
+.map-layer { position: fixed; inset: 0; z-index: 5; pointer-events: none; }
+.tip {
+  position: absolute; max-width: 320px;
+  background: var(--panel); color: var(--ink); border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .2); padding: 6px 9px; font-size: 13px; line-height: 1.4;
+}
+.tip[hidden], .pick[hidden] { display: none; }
+.tip b { font-weight: 700; }
+.tip .muted { font-size: 12px; }
+.tip-list > div { display: flex; align-items: center; gap: 6px; white-space: nowrap; line-height: 1.7; }
+.tip-hint { font-size: 11.5px; margin-top: 3px; }
+.pick {
+  position: absolute; min-width: 230px; max-height: calc(100% - 16px); overflow-y: auto; padding: 4px 0;
+  background: var(--panel); color: var(--ink); border-radius: 12px; box-shadow: var(--shadow);
+  pointer-events: auto;
+}
+.pick .row { padding: 7px 14px; gap: 10px; }
+.pick-head { padding: 6px 14px 4px; font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+
+/* ---------- About (app_design 6.7) ---------- */
+.about { padding: 0 16px 20px; color: var(--ink-2); }
+.about p { margin: 0 0 12px; }
+.about h2 { margin: 18px 0 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); }
+.about ul { margin: 0 0 12px; padding-left: 18px; }
+.about li { margin-bottom: 6px; }
+.about a { color: var(--red-ink); font-weight: 600; }
+
+/* ---------- Map controls ---------- */
+.maplibregl-ctrl-bottom-right { bottom: var(--cover-bottom, 0px); transition: bottom var(--fold-ms) var(--fold-ease); }
+@media (prefers-reduced-motion: reduce) { .maplibregl-ctrl-bottom-right { transition: none; } }
+.maplibregl-ctrl-group { background: var(--panel); border-radius: 10px; box-shadow: var(--shadow); overflow: hidden; }
+.maplibregl-ctrl-group:not(:empty) { box-shadow: var(--shadow); }
+.maplibregl-ctrl-group button + button { border-top: 1px solid var(--rule); }
+.maplibregl-ctrl-group button .maplibregl-ctrl-icon { filter: none; }
+:root[data-scheme="dark"] .maplibregl-ctrl-group button .maplibregl-ctrl-icon { filter: invert(1); }
+
+/* The attribution (app_design 5.1). */
+.attrib { position: relative; margin: 0 10px 10px 0; font-size: 11px; line-height: 1.5; }
+.attrib-full {
+  max-width: 560px; padding: 3px 8px; border-radius: 6px; text-align: right;
+  background: color-mix(in srgb, var(--panel) 85%, transparent); color: var(--ink-2);
+}
+.attrib a { color: var(--ink); }
+.attrib-full span + span::before { content: " · "; }
+.attrib-i, .attrib-close {
+  display: none; width: 28px; height: 28px; border-radius: 50%; border: 0; padding: 0;
+  background: var(--panel); color: var(--ink-2); box-shadow: var(--shadow);
+  font: italic 700 15px/28px Georgia, serif; cursor: pointer;
+}
+.attrib-close { position: absolute; top: 6px; right: 6px; box-shadow: none; background: var(--hover); font: 600 16px/28px "Hanken Grotesk", sans-serif; font-style: normal; }
+@media (max-width: 640px) {
+  .attrib.is-collapsed .attrib-full { display: none; }
+  .attrib.is-collapsed .attrib-i { display: block; margin-left: auto; }
+  .attrib.is-open .attrib-full {
+    display: block; position: absolute; right: 0; bottom: 0; width: min(320px, calc(100vw - 20px));
+    padding: 12px 40px 12px 12px; text-align: left; background: var(--panel); box-shadow: var(--shadow); border-radius: 10px;
+  }
+  .attrib.is-open .attrib-full span { display: block; }
+  .attrib.is-open .attrib-full span + span::before { content: none; }
+  .attrib.is-open .attrib-close { display: block; }
+  .maplibregl-ctrl-bottom-right .maplibregl-ctrl-group { display: none; }
+}
+
+/* ---------- Phone: the panel is a bottom sheet (app_design 4.1) ---------- */
+@media (max-width: 640px) {
+  .panel {
+    top: auto; left: 0; right: 0; bottom: 0; width: auto;
+    border-radius: 18px 18px 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .top { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 8px; padding: 0 16px 10px; }
+  .fold {
+    grid-column: 1 / -1; position: static;
+    width: auto; height: 22px; margin: 0 -16px; border-radius: 0;
+    background: none; touch-action: none;
+  }
+  .fold svg { display: none; }
+  .fold::before { content: ""; width: 36px; height: 4px; border-radius: 2px; background: var(--ink-3); opacity: .5; }
+  .brand { padding: 0; }
+  .brand-text { display: none; }
+  .mark { width: 44px; height: 44px; border-radius: 10px; }
+  .search { margin: 0; }
+  .search kbd { display: none; }
+}
+
+/* prod_design 9, step 15: the measurements box of ?perf. A tap clears the series. */
+.perf-box {
+  position: fixed; top: 8px; right: 8px; z-index: 100; max-width: calc(100vw - 16px); margin: 0; padding: 6px 8px;
+  font: 10px/1.35 ui-monospace, Menlo, monospace; white-space: pre; overflow: hidden;
+  color: #fff; background: rgb(0 0 0 / .75); border-radius: 6px;
+}

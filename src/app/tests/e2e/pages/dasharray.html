@@ -1,0 +1,70 @@
+<!doctype html>
+<!-- prod_design 5.4: one line layer with a data-driven line-dasharray. Used by tests/e2e/dasharray.spec.ts. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Dash check</title>
+    <style>
+      html, body { margin: 0; }
+      #map { width: 400px; height: 200px; }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script type="module">
+      import { maplibregl } from "/src/map/maplibre.ts";
+
+      const errors = [];
+      const map = new maplibregl.Map({
+        container: "map",
+        style: { version: 8, sources: {}, layers: [{ id: "bg", type: "background", paint: { "background-color": "#ffffff" } }] },
+        center: [0, 0],
+        zoom: 10,
+        attributionControl: false,
+        canvasContextAttributes: { preserveDrawingBuffer: true },
+      });
+      map.on("error", (e) => errors.push(String(e.error?.message ?? e.error)));
+
+      map.on("load", () => {
+        const y = (lat) => map.unproject([0, lat]).lat;
+        const line = (lat, cls) => ({
+          type: "Feature",
+          properties: { cls },
+          geometry: { type: "LineString", coordinates: [[map.unproject([0, 0]).lng, y(lat)], [map.unproject([400, 0]).lng, y(lat)]] },
+        });
+        map.addSource("view", { type: "geojson", data: { type: "FeatureCollection", features: [line(60, "day"), line(140, "limited")] } });
+        map.addLayer({
+          id: "spider-after",
+          type: "line",
+          source: "view",
+          paint: {
+            "line-color": "#000000",
+            "line-width": 4,
+            "line-dasharray": ["match", ["get", "cls"], "limited", ["literal", [1.5, 1.75]], ["literal", [1, 0]]],
+          },
+        });
+        map.once("idle", () => {
+          const c = document.createElement("canvas");
+          const src = map.getCanvas();
+          c.width = src.width;
+          c.height = src.height;
+          const ctx = c.getContext("2d");
+          ctx.drawImage(src, 0, 0);
+          const ratio = src.width / 400;
+          // The number of dark runs along a row of pixels.
+          const runs = (yCss) => {
+            const row = ctx.getImageData(0, Math.round(yCss * ratio), c.width, 1).data;
+            let n = 0, on = false;
+            for (let x = Math.round(20 * ratio); x < c.width - Math.round(20 * ratio); x++) {
+              const dark = row[x * 4] < 128;
+              if (dark && !on) n++;
+              on = dark;
+            }
+            return n;
+          };
+          window.dasharray = { version: maplibregl.getVersion(), errors, solidRuns: runs(60), dashedRuns: runs(140) };
+        });
+      });
+    </script>
+  </body>
+</html>
