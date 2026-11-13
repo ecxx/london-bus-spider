@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import preact from "@preact/preset-vite";
-import { defineConfig, loadEnv, type Connect, type Plugin } from "vite";
+import { defineConfig, loadEnv, searchForWorkspaceRoot, type Connect, type Plugin } from "vite";
 
 // The project root: the .env with the CARTO keys and the data/ folder are there.
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
@@ -54,6 +54,8 @@ export default defineConfig(({ mode }) => ({
   plugins: [preact(), exportData()],
   define: { __CARTO_KEY__: JSON.stringify(cartoKey(mode)) },
   build: { target: "es2022" },
+  // docs/logo.md: the panel imports the logo from assets/logo/ in the project root.
+  server: { fs: { allow: [searchForWorkspaceRoot(process.cwd()), path.join(ROOT, "assets", "logo")] } },
   test: {
     include: ["tests/unit/**/*.test.ts"],
     environment: "node",

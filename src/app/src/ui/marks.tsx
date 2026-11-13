@@ -23,14 +23,6 @@ export function StationRing({ text, stand = false, long = false, size }: { text:
   );
 }
 
-export const BusIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-    <rect x="4.5" y="3" width="15" height="15" rx="3" />
-    <path d="M4.5 10.5h15M8 21v-3M16 21v-3" />
-    <path d="M8 14.5h.01M16 14.5h.01" stroke-width="3" />
-  </svg>
-);
-
 export const ChevronRight = () => (
   <svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <path d="m6 3 5 5-5 5" />

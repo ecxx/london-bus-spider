@@ -10,7 +10,9 @@ import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { viewHash } from "../model/url";
 import { core, cover, folded, loadError, query, reduceMotion, rowHover, view, wide, type Cover } from "../state/signals";
 import { ViewHeader } from "./headers";
-import { BusIcon, ChevronUp, SearchIcon } from "./marks";
+import { ChevronUp, SearchIcon } from "./marks";
+// docs/logo.md: the logo with white lines on red. Vite copies it to assets/ with a hashed name.
+import logoUrl from "../../../../assets/logo/tangledbuses_red.svg?url";
 import { redScroll, ScrollContext, scrollToRed } from "./scroll";
 import { comboProps, SearchResults, useSearch } from "./Search";
 import { ViewContent } from "./ViewContent";
@@ -172,14 +174,14 @@ export function Panel() {
         </button>
         <header class="brand">
           <a class="mark" href="#/" aria-label="Home" title="Home">
-            <BusIcon />
+            <img src={logoUrl} alt="" />
           </a>
           <div class="brand-text">
             <a class="brand-name" href="#/">
-              Bus Router
+              TangledBuses
             </a>
             <div class="brand-sub">
-              London · <a href={viewHash({ kind: "about" })}>About</a>
+              London Bus Map · <a href={viewHash({ kind: "about" })}>About</a>
             </div>
           </div>
         </header>

@@ -14,8 +14,8 @@ export function AboutView({ d }: { d: Core }) {
   const date = datasetDate(d.manifest.dataset);
   return (
     <div class="about">
-      <p>Bus Router shows the London bus routes that go through a stop or a station.</p>
-      <p>Bus Router is not an official TfL product. TfL does not endorse it.</p>
+      <p>Explore route patterns and stop passing routes for TfL services.</p>
+      <p>TangledBuses is not a TfL-endorsed product.</p>
       <h2>Data sources</h2>
       <ul>
         <li>

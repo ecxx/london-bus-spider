@@ -1,5 +1,5 @@
 {
-  "name": "busrouter-london",
+  "name": "tangledbuses",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -12,6 +12,7 @@
     "build:live": "tsc --noEmit && vite build --mode live",
     "preview": "vite preview",
     "bundle": "node scripts/bundle.mjs",
+    "favicon": "node scripts/favicon.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "e2e": "playwright test --project chromium --project webkit",

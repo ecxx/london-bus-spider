@@ -7,13 +7,13 @@ test.describe("each URL of app_design 4.3 opens its view", () => {
     await open(page, "#/");
     await expect(page.getByRole("tab", { name: "Routes 675" })).toHaveAttribute("aria-selected", "true");
     await expect(page.getByRole("tab", { name: "Stations 11,571" })).toHaveAttribute("aria-selected", "false");
-    await expect(page).toHaveTitle("Bus Router London");
+    await expect(page).toHaveTitle("TangledBuses");
   });
 
   test("station", async ({ page }) => {
     await open(page, "#/station/ICS1001038");
     await expect(h1(page)).toHaveText("Brondesbury Station");
-    await expect(page).toHaveTitle("Brondesbury Station · Bus Router London");
+    await expect(page).toHaveTitle("Brondesbury Station · TangledBuses");
   });
 
   test("stop", async ({ page }) => {
@@ -47,8 +47,8 @@ test.describe("each URL of app_design 4.3 opens its view", () => {
     await open(page, "#/about");
     await expect(h1(page)).toHaveText("About");
     const about = page.locator(".about");
-    await expect(about).toContainText("Bus Router shows the London bus routes that go through a stop or a station.");
-    await expect(about).toContainText("Bus Router is not an official TfL product. TfL does not endorse it.");
+    await expect(about).toContainText("TangledBuses shows the London bus routes that go through a stop or a station.");
+    await expect(about).toContainText("TangledBuses is not an official TfL product. TfL does not endorse it.");
     await expect(about).toContainText("Powered by TfL Open Data");
     await expect(about.getByRole("link", { name: "TfL Transport Data Service terms" })).toHaveAttribute(
       "href",

@@ -6,7 +6,7 @@ import { core, view } from "../state/signals";
 import { Panel } from "./Panel";
 import { ScrollContext } from "./scroll";
 
-const TITLE = "Bus Router London";
+const TITLE = "TangledBuses";
 
 export function App() {
   const scroll = useRef<HTMLDivElement>(null);
